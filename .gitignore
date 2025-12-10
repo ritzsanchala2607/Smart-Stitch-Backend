@@ -1,0 +1,119 @@
+##############################
+# Java / Spring Boot
+##############################
+
+# Compiled class files
+*.class
+
+# Logs
+*.log
+logs/
+spring.log
+
+# Package files
+*.jar
+*.war
+*.ear
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+*.gradle
+*.gradle.kts
+gradle-app.setting
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# VS Code
+.vscode/
+
+# Eclipse
+.project
+.classpath
+.settings/
+bin/
+
+##############################
+# Sensitive Files (DO NOT COMMIT)
+##############################
+
+# Spring Boot config files (store locally only)
+src/main/resources/application.properties
+src/main/resources/application.yml
+src/main/resources/application-*.properties
+src/main/resources/application-*.yml
+
+# Environment variables
+.env
+.env.*
+*.env
+
+# Secrets / Keys
+*.keystore
+*.jks
+*.p12
+*.pem
+*.crt
+*.key
+*.der
+
+##############################
+# OS generated files
+##############################
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+##############################
+# Temporary / cache
+##############################
+
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+
+##############################
+# Node (if you use front-end inside repo)
+##############################
+
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+.\QUICK_START.md   
+.\POSTMAN_EXAMPLES.md
+.\mvnw.cmd
+.\mvnw
+.\IMPLEMENTATION_SUMMARY.md
+.\HELP.md
+.\FIXES_APPLIED.md
+.\AUTH_SETUP.md
+.\AUTH_IMPLEMENTATION_SUMMARY.md
+.\AUTH_FILES_CREATED.txt 
