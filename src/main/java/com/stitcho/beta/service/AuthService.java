@@ -8,7 +8,6 @@ import com.stitcho.beta.Repository.UserRepository;
 import com.stitcho.beta.dto.AuthResponse;
 import com.stitcho.beta.dto.LoginRequest;
 import com.stitcho.beta.dto.RegisterRequest;
-import com.stitcho.beta.dto.ResetPasswordRequest;
 import com.stitcho.beta.entity.Role;
 import com.stitcho.beta.entity.User;
 import com.stitcho.beta.util.JwtUtil;
@@ -31,12 +30,16 @@ public class AuthService {
             throw new IllegalArgumentException("Email already in use.");
         }
 
-        // 2. fetch or create role
-        Role role = roleRepository.findByRoleName(request.getRole());
+        // 2. validate role is one of the allowed roles
+        String requestedRole = request.getRole().toLowerCase();
+        if (!requestedRole.equals("owner") && !requestedRole.equals("worker") && !requestedRole.equals("customer")) {
+            throw new IllegalArgumentException("Invalid role. Allowed roles are: owner, worker, customer");
+        }
+
+        // 3. fetch role
+        Role role = roleRepository.findByRoleName(requestedRole);
         if (role == null) {
-            role = new Role();
-            role.setRoleName(request.getRole());
-            role = roleRepository.save(role);
+            throw new IllegalArgumentException("Role not found. Please contact administrator.");
         }
 
         // 3. create user and encode password
@@ -81,24 +84,6 @@ public class AuthService {
         resp.setName(user.getName());
         resp.setRole(user.getRole().getRoleName());
         resp.setJwt(token);
-        return resp;
-    }
-
-    @Transactional
-    public AuthResponse resetPassword(ResetPasswordRequest request) {
-        // Check if email exists
-        User user = userRepository.findByEmail(request.getEmail());
-        if (user == null) {
-            throw new IllegalArgumentException("Email not found.");
-        }
-
-        // Update password
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        userRepository.save(user);
-
-        AuthResponse resp = new AuthResponse();
-        resp.setMessage("Password reset successfully. You can now login with your new password.");
-        resp.setEmail(user.getEmail());
         return resp;
     }
 }

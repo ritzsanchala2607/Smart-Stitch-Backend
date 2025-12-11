@@ -2,28 +2,29 @@ package com.stitcho.beta.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.stitcho.beta.dto.AuthResponse;
 import com.stitcho.beta.dto.LoginRequest;
 import com.stitcho.beta.dto.RegisterRequest;
-import com.stitcho.beta.dto.ResetPasswordRequest;
 import com.stitcho.beta.service.AuthService;
+import com.stitcho.beta.service.OAuth2Service;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
-
-    public AuthController(AuthService authService) {
-        this.authService = authService;
-    }
+    private final OAuth2Service oAuth2Service;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest req) {
@@ -37,9 +38,17 @@ public class AuthController {
         return ResponseEntity.ok(res);
     }
 
-    @PostMapping("/reset-password")
-    public ResponseEntity<AuthResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
-        AuthResponse res = authService.resetPassword(req);
+    @PostMapping("/oauth2/google")
+    public ResponseEntity<AuthResponse> googleLogin(@RequestParam String email, @RequestParam String name,
+            @RequestParam String googleId, @RequestParam(required = false) String picture) {
+        AuthResponse res = oAuth2Service.handleGoogleLogin(email, name, googleId, picture);
+        return ResponseEntity.ok(res);
+    }
+
+    @GetMapping("/oauth2/success")
+    public ResponseEntity<AuthResponse> oAuth2Success(@RequestParam String email, @RequestParam String name,
+            @RequestParam String googleId, @RequestParam(required = false) String picture) {
+        AuthResponse res = oAuth2Service.handleGoogleLogin(email, name, googleId, picture);
         return ResponseEntity.ok(res);
     }
 }
