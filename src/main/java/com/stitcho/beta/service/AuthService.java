@@ -8,6 +8,7 @@ import com.stitcho.beta.Repository.UserRepository;
 import com.stitcho.beta.dto.AuthResponse;
 import com.stitcho.beta.dto.LoginRequest;
 import com.stitcho.beta.dto.RegisterRequest;
+import com.stitcho.beta.dto.ResetPasswordRequest;
 import com.stitcho.beta.entity.Role;
 import com.stitcho.beta.entity.User;
 import com.stitcho.beta.util.JwtUtil;
@@ -80,6 +81,24 @@ public class AuthService {
         resp.setName(user.getName());
         resp.setRole(user.getRole().getRoleName());
         resp.setJwt(token);
+        return resp;
+    }
+
+    @Transactional
+    public AuthResponse resetPassword(ResetPasswordRequest request) {
+        // Check if email exists
+        User user = userRepository.findByEmail(request.getEmail());
+        if (user == null) {
+            throw new IllegalArgumentException("Email not found.");
+        }
+
+        // Update password
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        AuthResponse resp = new AuthResponse();
+        resp.setMessage("Password reset successfully. You can now login with your new password.");
+        resp.setEmail(user.getEmail());
         return resp;
     }
 }

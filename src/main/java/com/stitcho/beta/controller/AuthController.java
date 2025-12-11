@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.stitcho.beta.dto.AuthResponse;
 import com.stitcho.beta.dto.LoginRequest;
 import com.stitcho.beta.dto.RegisterRequest;
+import com.stitcho.beta.dto.ResetPasswordRequest;
 import com.stitcho.beta.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -33,6 +34,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest req) {
         AuthResponse res = authService.login(req);
+        return ResponseEntity.ok(res);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<AuthResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
+        AuthResponse res = authService.resetPassword(req);
         return ResponseEntity.ok(res);
     }
 }
