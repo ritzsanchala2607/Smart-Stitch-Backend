@@ -33,9 +33,7 @@ public class OAuth2Service {
 
             Role customerRole = roleRepository.findByRoleName("customer");
             if (customerRole == null) {
-                customerRole = new Role();
-                customerRole.setRoleName("customer");
-                customerRole = roleRepository.save(customerRole);
+                throw new IllegalArgumentException("Customer role not found. Please contact administrator.");
             }
             user.setRole(customerRole);
             user = userRepository.save(user);
