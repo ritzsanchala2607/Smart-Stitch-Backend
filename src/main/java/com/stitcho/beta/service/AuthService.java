@@ -32,7 +32,7 @@ public class AuthService {
 
         // 2. validate role is one of the allowed roles
         String requestedRole = request.getRole();
-        if (!requestedRole.equals("Owner") && !requestedRole.equals("Worker") && !requestedRole.equals("Customer")) {
+        if (!requestedRole.equalsIgnoreCase("OWNER") && !requestedRole.equalsIgnoreCase("WORKER") && !requestedRole.equalsIgnoreCase("CUSTOMER")) {
             throw new IllegalArgumentException("Invalid role. Allowed roles are: owner, worker, customer");
         }
 
@@ -75,7 +75,7 @@ public class AuthService {
         }
 
         // Validate role matches
-        if (user.getRole() == null || !user.getRole().getRoleName().equals(request.getRole())) {
+        if (user.getRole() == null || !user.getRole().getRoleName().equalsIgnoreCase(request.getRole())) {
             throw new IllegalArgumentException("Invalid role for this user.");
         }
 
