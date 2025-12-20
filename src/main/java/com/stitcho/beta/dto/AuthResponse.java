@@ -10,9 +10,10 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AuthResponse {
-private String message;
-private String email;
-private String name;
-private String role;
-private String jwt;
+    private String message;
+    private Long userId;
+    private String email;
+    private String name;
+    private String role;
+    private String jwt;
 }

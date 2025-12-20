@@ -56,6 +56,7 @@ public class AuthService {
         String token = jwtUtil.generateToken(user.getEmail(), user.getName(), role.getRoleName());
         AuthResponse resp = new AuthResponse();
         resp.setMessage("User registered successfully");
+        resp.setUserId(user.getId());
         resp.setEmail(user.getEmail());
         resp.setName(user.getName());
         resp.setRole(role.getRoleName());
@@ -85,6 +86,7 @@ public class AuthService {
         String token = jwtUtil.generateToken(user.getEmail(), user.getName(), user.getRole().getRoleName());
         AuthResponse resp = new AuthResponse();
         resp.setMessage("Login successful");
+        resp.setUserId(user.getId());
         resp.setEmail(user.getEmail());
         resp.setName(user.getName());
         resp.setRole(user.getRole().getRoleName());
