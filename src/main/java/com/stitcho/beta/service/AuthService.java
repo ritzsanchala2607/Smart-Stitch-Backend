@@ -70,14 +70,16 @@ public class AuthService {
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            System.out.println(request.getPassword());
-            System.out.println(user.getPassword());
             throw new IllegalArgumentException("Invalid email or password.");
         }
 
-        // Validate role matches
-        if (user.getRole() == null || !user.getRole().getRoleName().equalsIgnoreCase(request.getRole())) {
-            throw new IllegalArgumentException("Invalid role for this user.");
+        // Validate role matches (case-insensitive)
+        if (user.getRole() == null) {
+            throw new IllegalArgumentException("User has no role assigned.");
+        }
+        
+        if (!user.getRole().getRoleName().equalsIgnoreCase(request.getRole())) {
+            throw new IllegalArgumentException("Invalid role for this user. Expected: " + user.getRole().getRoleName());
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getName(), user.getRole().getRoleName());
