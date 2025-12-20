@@ -1,5 +1,9 @@
 package com.stitcho.beta.entity;
 
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -13,31 +17,30 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name ="users")
+@Table(name = "workers")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class Worker {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
-
-    private String name;
-
-    private String email;
-
-    private String password;
+    private Long id;
 
     @ManyToOne
-    @JoinColumn(name="role_id")
-    private Role role;
+    @JoinColumn(name = "user_id")
+    private User user;
 
-    private String googleId;
+    @ManyToOne
+    @JoinColumn(name = "shop_id")
+    private Shop shop;
 
-    private String profilePicture;
+    private String workType;
 
-    private String provider;
+    private Integer experience;
 
-    private String contactNumber;
+    private Double ratings;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 }

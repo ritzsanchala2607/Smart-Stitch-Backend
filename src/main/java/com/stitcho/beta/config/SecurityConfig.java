@@ -35,6 +35,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/login/**").permitAll()
+                        .requestMatchers("/api/owners/**").permitAll()
+                        .requestMatchers("/api/shops/**").permitAll()
                         .anyRequest().authenticated()
                 );
         return http.build();

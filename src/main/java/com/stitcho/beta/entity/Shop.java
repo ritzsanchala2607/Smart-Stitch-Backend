@@ -4,8 +4,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -13,31 +11,21 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name ="users")
+@Table(name = "shops")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class Shop {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Long shopId;
 
-    private String name;
+    private String shopName;
 
-    private String email;
+    private String shopEmail;
 
-    private String password;
+    private String shopMobileNo;
 
-    @ManyToOne
-    @JoinColumn(name="role_id")
-    private Role role;
-
-    private String googleId;
-
-    private String profilePicture;
-
-    private String provider;
-
-    private String contactNumber;
+    private String shopAddress;
 }
