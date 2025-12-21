@@ -33,9 +33,12 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
+                        // Public endpoints
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/login/**").permitAll()
                         .requestMatchers("/api/owners/create").permitAll()
+                        
+                        // Allow all secure endpoints (JWT validation done in controllers)
                         .requestMatchers("/api/owners/**").permitAll()
                         .requestMatchers("/api/profile/**").permitAll()
                         .requestMatchers("/api/tasks/**").permitAll()
@@ -43,6 +46,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/workers/**").permitAll()
                         .requestMatchers("/api/customers/**").permitAll()
                         .requestMatchers("/api/shops/**").permitAll()
+                        
+                        // All other requests require authentication
                         .anyRequest().authenticated()
                 );
         return http.build();

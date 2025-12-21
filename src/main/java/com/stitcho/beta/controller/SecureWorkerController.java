@@ -48,9 +48,12 @@ public class SecureWorkerController {
         Long userId = jwtUtil.extractUserId(token);
         String role = jwtUtil.extractRole(token);
         
+        // Debug: Log the role for troubleshooting
+        System.out.println("DEBUG - User ID: " + userId + ", Role from JWT: '" + role + "'");
+        
         if (!"OWNER".equalsIgnoreCase(role)) {
             return ResponseEntity.status(403)
-                    .body(ApiResponse.success("Only owners can add workers", null));
+                    .body(ApiResponse.success("Access denied. Please ensure you are logged in as a shop owner and have the necessary permissions. Your role: " + role, null));
         }
 
         workerService.createWorker(userId, request);
