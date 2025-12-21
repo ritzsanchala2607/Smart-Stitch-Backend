@@ -10,4 +10,5 @@ import com.stitcho.beta.entity.Customer;
 @Repository
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
     Optional<Customer> findByIdAndShop_ShopId(Long customerId, Long shopId);
+    Optional<Customer> findByUser_Id(Long userId);
 }

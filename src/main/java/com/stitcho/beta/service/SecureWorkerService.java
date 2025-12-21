@@ -1,0 +1,129 @@
+package com.stitcho.beta.service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.stitcho.beta.Repository.OwnerRepository;
+import com.stitcho.beta.Repository.RateRepository;
+import com.stitcho.beta.Repository.RoleRepository;
+import com.stitcho.beta.Repository.TaskRepository;
+import com.stitcho.beta.Repository.UserRepository;
+import com.stitcho.beta.Repository.WorkerRepository;
+import com.stitcho.beta.dto.CreateWorkerRequest;
+import com.stitcho.beta.dto.WorkerResponse;
+import com.stitcho.beta.entity.Owner;
+import com.stitcho.beta.entity.Rate;
+import com.stitcho.beta.entity.Role;
+import com.stitcho.beta.entity.Shop;
+import com.stitcho.beta.entity.Task;
+import com.stitcho.beta.entity.User;
+import com.stitcho.beta.entity.Worker;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class SecureWorkerService {
+    private final UserRepository userRepository;
+    private final WorkerRepository workerRepository;
+    private final RateRepository rateRepository;
+    private final TaskRepository taskRepository;
+    private final RoleRepository roleRepository;
+    private final OwnerRepository ownerRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    @Transactional
+    public void createWorker(Long userId, CreateWorkerRequest request) {
+        // Get owner's shop
+        Owner owner = ownerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Owner not found"));
+        
+        Shop shop = owner.getShop();
+
+        // Check if email already exists
+        if (userRepository.findByEmail(request.getUser().getEmail()) != null) {
+            throw new IllegalArgumentException("Email already in use");
+        }
+
+        // Create user
+        Role workerRole = roleRepository.findById(request.getUser().getRoleId())
+                .orElseThrow(() -> new RuntimeException("Role not found"));
+
+        User user = new User();
+        user.setName(request.getUser().getName());
+        user.setEmail(request.getUser().getEmail());
+        user.setContactNumber(request.getUser().getContactNumber());
+        user.setPassword(passwordEncoder.encode(request.getUser().getPassword()));
+        user.setProfilePicture(request.getUser().getProfilePicture());
+        user.setRole(workerRole);
+        user = userRepository.save(user);
+
+        // Create worker profile
+        Worker worker = new Worker();
+        worker.setUser(user);
+        worker.setShop(shop);
+        worker.setWorkType(request.getWorker().getWorkType());
+        worker.setExperience(request.getWorker().getExperience());
+        worker.setRatings(null);
+        worker = workerRepository.save(worker);
+
+        // Create rates
+        for (var rateReq : request.getRates()) {
+            Rate rate = new Rate();
+            rate.setWorker(worker);
+            rate.setWorkType(rateReq.getWorkType());
+            rate.setRate(rateReq.getRate());
+            rateRepository.save(rate);
+        }
+    }
+
+    public List<WorkerResponse> getMyShopWorkers(Long userId, String name) {
+        // Get owner's shop
+        Owner owner = ownerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Owner not found"));
+        
+        Long shopId = owner.getShop().getShopId();
+
+        List<Worker> workers;
+        if (name != null && !name.trim().isEmpty()) {
+            workers = workerRepository.findByShopIdAndUserNameContaining(shopId, name);
+        } else {
+            workers = workerRepository.findByShop_ShopId(shopId);
+        }
+
+        return workers.stream()
+                .map(this::mapToWorkerResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<Task> getMyTasks(Long userId) {
+        Worker worker = workerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Worker not found"));
+        
+        return taskRepository.findByWorker_Id(worker.getId());
+    }
+
+    private WorkerResponse mapToWorkerResponse(Worker worker) {
+        WorkerResponse response = new WorkerResponse();
+        response.setWorkerId(worker.getId());
+        response.setUserId(worker.getUser().getId());
+        response.setName(worker.getUser().getName());
+        response.setEmail(worker.getUser().getEmail());
+        response.setContactNumber(worker.getUser().getContactNumber());
+        response.setWorkType(worker.getWorkType());
+        response.setExperience(worker.getExperience());
+        response.setRatings(worker.getRatings());
+
+        List<Rate> rates = rateRepository.findByWorker_Id(worker.getId());
+        List<WorkerResponse.RateInfo> rateInfos = rates.stream()
+                .map(rate -> new WorkerResponse.RateInfo(rate.getWorkType(), rate.getRate()))
+                .collect(Collectors.toList());
+        response.setRates(rateInfos);
+
+        return response;
+    }
+}

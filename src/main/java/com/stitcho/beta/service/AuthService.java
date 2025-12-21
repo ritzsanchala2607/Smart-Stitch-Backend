@@ -32,7 +32,8 @@ public class AuthService {
 
         // 2. validate role is one of the allowed roles
         String requestedRole = request.getRole();
-        if (!requestedRole.equalsIgnoreCase("OWNER") && !requestedRole.equalsIgnoreCase("WORKER") && !requestedRole.equalsIgnoreCase("CUSTOMER") && !requestedRole.equalsIgnoreCase("ADMIN")) {
+        if (!requestedRole.equalsIgnoreCase("OWNER") && !requestedRole.equalsIgnoreCase("WORKER") 
+            && !requestedRole.equalsIgnoreCase("CUSTOMER") && !requestedRole.equalsIgnoreCase("ADMIN")) {
             throw new IllegalArgumentException("Invalid role. Allowed roles are: owner, worker, customer");
         }
 
@@ -42,7 +43,7 @@ public class AuthService {
             throw new IllegalArgumentException("Role not found. Please contact administrator.");
         }
 
-        // 3. create user and encode password
+        // 4. create user and encode password
         User user = new User();
         user.setName(request.getName());
         user.setEmail(request.getEmail());
@@ -52,8 +53,15 @@ public class AuthService {
 
         user = userRepository.save(user);
 
-        // 4. prepare response
-        String token = jwtUtil.generateToken(user.getEmail(), user.getName(), role.getRoleName());
+        // 5. Generate JWT with userId
+        String token = jwtUtil.generateTokenWithIds(
+            user.getEmail(), 
+            user.getName(), 
+            role.getRoleName(),
+            user.getId(),
+            null, null, null
+        );
+        
         AuthResponse resp = new AuthResponse();
         resp.setMessage("User registered successfully");
         resp.setUserId(user.getId());
@@ -83,7 +91,24 @@ public class AuthService {
             throw new IllegalArgumentException("Invalid role for this user. Expected: " + user.getRole().getRoleName());
         }
 
-        String token = jwtUtil.generateToken(user.getEmail(), user.getName(), user.getRole().getRoleName());
+        // Get role-specific IDs
+        Long shopId = null;
+        Long customerId = null;
+        Long workerId = null;
+
+        // TODO: Fetch these based on role
+        // Will be populated when we refactor Owner/Customer/Worker services
+
+        String token = jwtUtil.generateTokenWithIds(
+            user.getEmail(), 
+            user.getName(), 
+            user.getRole().getRoleName(),
+            user.getId(),
+            shopId,
+            customerId,
+            workerId
+        );
+        
         AuthResponse resp = new AuthResponse();
         resp.setMessage("Login successful");
         resp.setUserId(user.getId());

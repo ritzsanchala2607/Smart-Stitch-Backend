@@ -35,9 +35,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/login/**").permitAll()
+                        .requestMatchers("/api/owners/create").permitAll()
                         .requestMatchers("/api/owners/**").permitAll()
-                        .requestMatchers("/api/shops/**").permitAll()
+                        .requestMatchers("/api/profile/**").permitAll()
+                        .requestMatchers("/api/tasks/**").permitAll()
+                        .requestMatchers("/api/orders/**").permitAll()
                         .requestMatchers("/api/workers/**").permitAll()
+                        .requestMatchers("/api/customers/**").permitAll()
+                        .requestMatchers("/api/shops/**").permitAll()
                         .anyRequest().authenticated()
                 );
         return http.build();

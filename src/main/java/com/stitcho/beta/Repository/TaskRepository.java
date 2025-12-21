@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.stitcho.beta.entity.Task;
@@ -16,4 +18,5 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     Optional<Task> findByTaskIdAndWorker_Id(Long taskId, Long workerId);
     List<Task> findByOrder_OrderIdAndStatus(Long orderId, TaskStatus status);
     List<Task> findByOrder_OrderIdAndTaskTypeAndStatus(Long orderId, TaskType taskType, TaskStatus status);
+    List<Task> findByWorker_Id(Long workerId);
 }

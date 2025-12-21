@@ -6,8 +6,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.stitcho.beta.Repository.TaskRepository;
+import com.stitcho.beta.Repository.WorkerRepository;
 import com.stitcho.beta.entity.Task;
 import com.stitcho.beta.entity.TaskStatus;
+import com.stitcho.beta.entity.Worker;
 
 import lombok.RequiredArgsConstructor;
 
@@ -15,11 +17,16 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TaskService {
     private final TaskRepository taskRepository;
+    private final WorkerRepository workerRepository;
     private final OrderService orderService;
 
     @Transactional
-    public void startTask(Long taskId, Long workerId) {
-        Task task = taskRepository.findByTaskIdAndWorker_Id(taskId, workerId)
+    public void startTask(Long taskId, Long userId) {
+        // Get worker from userId
+        Worker worker = workerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Worker not found for this user"));
+
+        Task task = taskRepository.findByTaskIdAndWorker_Id(taskId, worker.getId())
                 .orElseThrow(() -> new RuntimeException("Task not found or does not belong to this worker"));
 
         if (task.getStatus() != TaskStatus.PENDING) {
@@ -35,8 +42,12 @@ public class TaskService {
     }
 
     @Transactional
-    public void completeTask(Long taskId, Long workerId) {
-        Task task = taskRepository.findByTaskIdAndWorker_Id(taskId, workerId)
+    public void completeTask(Long taskId, Long userId) {
+        // Get worker from userId
+        Worker worker = workerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Worker not found for this user"));
+
+        Task task = taskRepository.findByTaskIdAndWorker_Id(taskId, worker.getId())
                 .orElseThrow(() -> new RuntimeException("Task not found or does not belong to this worker"));
 
         if (task.getStatus() != TaskStatus.IN_PROGRESS) {
