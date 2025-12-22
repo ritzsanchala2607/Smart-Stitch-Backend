@@ -1,7 +1,9 @@
 package com.stitcho.beta.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,11 +12,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.stitcho.beta.dto.ApiResponse;
 import com.stitcho.beta.dto.CreateOrderRequest;
+import com.stitcho.beta.dto.DailyOrderSummary;
 import com.stitcho.beta.dto.OrderResponse;
+import com.stitcho.beta.dto.WeeklyOrderSummary;
 import com.stitcho.beta.service.SecureOrderService;
 import com.stitcho.beta.util.JwtUtil;
 
@@ -90,5 +95,53 @@ public class SecureOrderController {
 
         List<OrderResponse> orders = orderService.getMyOrders(userId, role);
         return ResponseEntity.ok(ApiResponse.success("Orders fetched successfully", orders));
+    }
+
+    @GetMapping("/daily")
+    public ResponseEntity<ApiResponse<DailyOrderSummary>> getDailyOrders(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        Long userId = jwtUtil.extractUserId(token);
+        String role = jwtUtil.extractRole(token);
+        
+        if (!"OWNER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only owners can view daily orders", null));
+        }
+
+        // If no date provided, use today
+        LocalDate targetDate = date != null ? date : LocalDate.now();
+
+        DailyOrderSummary summary = orderService.getDailyOrders(userId, targetDate);
+        return ResponseEntity.ok(ApiResponse.success("Daily orders fetched successfully", summary));
+    }
+
+    @GetMapping("/weekly")
+    public ResponseEntity<ApiResponse<WeeklyOrderSummary>> getWeeklyOrders(
+            @RequestHeader("Authorization") String authHeader) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        Long userId = jwtUtil.extractUserId(token);
+        String role = jwtUtil.extractRole(token);
+        
+        if (!"OWNER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only owners can view weekly orders", null));
+        }
+
+        WeeklyOrderSummary summary = orderService.getWeeklyOrders(userId);
+        return ResponseEntity.ok(ApiResponse.success("Weekly orders fetched successfully", summary));
     }
 }

@@ -1,5 +1,7 @@
 package com.stitcho.beta.service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -13,7 +15,9 @@ import com.stitcho.beta.Repository.OwnerRepository;
 import com.stitcho.beta.Repository.TaskRepository;
 import com.stitcho.beta.Repository.WorkerRepository;
 import com.stitcho.beta.dto.CreateOrderRequest;
+import com.stitcho.beta.dto.DailyOrderSummary;
 import com.stitcho.beta.dto.OrderResponse;
+import com.stitcho.beta.dto.WeeklyOrderSummary;
 import com.stitcho.beta.entity.Customer;
 import com.stitcho.beta.entity.Order;
 import com.stitcho.beta.entity.OrderItem;
@@ -197,5 +201,138 @@ public class SecureOrderService {
         response.setTasks(taskInfos);
 
         return response;
+    }
+
+    public DailyOrderSummary getDailyOrders(Long userId, LocalDate date) {
+        // Get owner's shop
+        Owner owner = ownerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Owner not found"));
+        
+        Long shopId = owner.getShop().getShopId();
+
+        // Get orders created on the specified date
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
+        
+        List<Order> orders = orderRepository.findByShop_ShopIdAndCreatedAtBetween(shopId, startOfDay, endOfDay);
+
+        // Map to summary
+        List<DailyOrderSummary.OrderSummary> orderSummaries = orders.stream()
+                .map(this::mapToOrderSummary)
+                .collect(Collectors.toList());
+
+        DailyOrderSummary summary = new DailyOrderSummary();
+        summary.setTotalOrders(orders.size());
+        summary.setOrders(orderSummaries);
+
+        return summary;
+    }
+
+    private DailyOrderSummary.OrderSummary mapToOrderSummary(Order order) {
+        DailyOrderSummary.OrderSummary summary = new DailyOrderSummary.OrderSummary();
+        summary.setOrderId(order.getOrderId());
+        summary.setCustomerName(order.getCustomer() != null && order.getCustomer().getUser() != null 
+                ? order.getCustomer().getUser().getName() 
+                : "Unknown");
+        summary.setTotalAmount(order.getTotalPrice());
+        summary.setStatus(order.getStatus() != null ? order.getStatus().name() : "NEW");
+        summary.setDeliveryDate(order.getDeadline());
+        summary.setCreatedAt(order.getCreatedAt());
+
+        // Get items
+        List<OrderItem> items = orderItemRepository.findByOrder_OrderId(order.getOrderId());
+        List<String> itemNames = items.stream()
+                .map(item -> item.getItemName() + " (x" + item.getQuantity() + ")")
+                .collect(Collectors.toList());
+        summary.setItems(itemNames);
+
+        // Get workers and tasks
+        List<Task> tasks = taskRepository.findByOrder_OrderId(order.getOrderId());
+        List<DailyOrderSummary.WorkerInfo> workerInfos = tasks.stream()
+                .map(task -> {
+                    DailyOrderSummary.WorkerInfo workerInfo = new DailyOrderSummary.WorkerInfo();
+                    if (task.getWorker() != null) {
+                        workerInfo.setWorkerId(task.getWorker().getId());
+                        workerInfo.setWorkerName(task.getWorker().getUser() != null 
+                                ? task.getWorker().getUser().getName() 
+                                : "Unknown");
+                    }
+                    workerInfo.setTaskType(task.getTaskType() != null ? task.getTaskType().name() : null);
+                    workerInfo.setTaskStatus(task.getStatus() != null ? task.getStatus().name() : "PENDING");
+                    return workerInfo;
+                })
+                .collect(Collectors.toList());
+        summary.setWorkers(workerInfos);
+
+        return summary;
+    }
+
+    public WeeklyOrderSummary getWeeklyOrders(Long userId) {
+        // Get owner's shop
+        Owner owner = ownerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Owner not found"));
+        
+        Long shopId = owner.getShop().getShopId();
+
+        // Get orders from last 7 days (including today)
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusDays(6); // Last 7 days including today
+        
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.plusDays(1).atStartOfDay();
+        
+        List<Order> orders = orderRepository.findByShop_ShopIdAndCreatedAtBetween(shopId, startDateTime, endDateTime);
+
+        // Map to summary
+        List<WeeklyOrderSummary.OrderSummary> orderSummaries = orders.stream()
+                .map(this::mapToWeeklyOrderSummary)
+                .collect(Collectors.toList());
+
+        WeeklyOrderSummary summary = new WeeklyOrderSummary();
+        summary.setTotalOrders(orders.size());
+        summary.setStartDate(startDate);
+        summary.setEndDate(endDate);
+        summary.setOrders(orderSummaries);
+
+        return summary;
+    }
+
+    private WeeklyOrderSummary.OrderSummary mapToWeeklyOrderSummary(Order order) {
+        WeeklyOrderSummary.OrderSummary summary = new WeeklyOrderSummary.OrderSummary();
+        summary.setOrderId(order.getOrderId());
+        summary.setCustomerName(order.getCustomer() != null && order.getCustomer().getUser() != null 
+                ? order.getCustomer().getUser().getName() 
+                : "Unknown");
+        summary.setTotalAmount(order.getTotalPrice());
+        summary.setStatus(order.getStatus() != null ? order.getStatus().name() : "NEW");
+        summary.setDeliveryDate(order.getDeadline());
+        summary.setCreatedAt(order.getCreatedAt());
+
+        // Get items
+        List<OrderItem> items = orderItemRepository.findByOrder_OrderId(order.getOrderId());
+        List<String> itemNames = items.stream()
+                .map(item -> item.getItemName() + " (x" + item.getQuantity() + ")")
+                .collect(Collectors.toList());
+        summary.setItems(itemNames);
+
+        // Get workers and tasks
+        List<Task> tasks = taskRepository.findByOrder_OrderId(order.getOrderId());
+        List<WeeklyOrderSummary.WorkerInfo> workerInfos = tasks.stream()
+                .map(task -> {
+                    WeeklyOrderSummary.WorkerInfo workerInfo = new WeeklyOrderSummary.WorkerInfo();
+                    if (task.getWorker() != null) {
+                        workerInfo.setWorkerId(task.getWorker().getId());
+                        workerInfo.setWorkerName(task.getWorker().getUser() != null 
+                                ? task.getWorker().getUser().getName() 
+                                : "Unknown");
+                    }
+                    workerInfo.setTaskType(task.getTaskType() != null ? task.getTaskType().name() : null);
+                    workerInfo.setTaskStatus(task.getStatus() != null ? task.getStatus().name() : "PENDING");
+                    return workerInfo;
+                })
+                .collect(Collectors.toList());
+        summary.setWorkers(workerInfos);
+
+        return summary;
     }
 }

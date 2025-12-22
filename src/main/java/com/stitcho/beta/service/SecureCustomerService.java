@@ -135,7 +135,7 @@ public class SecureCustomerService {
             }
         }
 
-        // Update user info
+        // Update user info (both owner and customer can update)
         if (request.getUser() != null) {
             User user = customer.getUser();
             if (request.getUser().getName() != null) {
@@ -150,8 +150,8 @@ public class SecureCustomerService {
             userRepository.save(user);
         }
 
-        // Upsert measurements
-        if (request.getMeasurements() != null) {
+        // Update measurements - ONLY OWNER can update measurements
+        if (request.getMeasurements() != null && "OWNER".equalsIgnoreCase(role)) {
             CustomerMeasurement measurement = measurementRepository.findByCustomer_Id(customerId)
                     .orElse(new CustomerMeasurement());
 
