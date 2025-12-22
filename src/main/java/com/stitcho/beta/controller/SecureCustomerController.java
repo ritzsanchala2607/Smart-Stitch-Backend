@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.stitcho.beta.dto.ApiResponse;
@@ -143,5 +144,28 @@ public class SecureCustomerController {
 
         List<OrderResponse> orders = customerService.getMyOrders(userId);
         return ResponseEntity.ok(ApiResponse.success("Orders fetched successfully", orders));
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<CustomerResponse>>> getAllCustomers(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) String name) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        Long userId = jwtUtil.extractUserId(token);
+        String role = jwtUtil.extractRole(token);
+        
+        if (!"OWNER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only owners can view all customers", null));
+        }
+
+        List<CustomerResponse> customers = customerService.getAllCustomers(userId, name);
+        return ResponseEntity.ok(ApiResponse.success("Customers fetched successfully", customers));
     }
 }

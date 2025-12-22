@@ -196,6 +196,25 @@ public class SecureCustomerService {
                 .toList();
     }
 
+    public List<CustomerResponse> getAllCustomers(Long userId, String name) {
+        // Get owner's shop
+        Owner owner = ownerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Owner not found"));
+        
+        Long shopId = owner.getShop().getShopId();
+
+        List<Customer> customers;
+        if (name != null && !name.trim().isEmpty()) {
+            customers = customerRepository.findByShop_ShopIdAndUser_NameContainingIgnoreCase(shopId, name);
+        } else {
+            customers = customerRepository.findByShop_ShopId(shopId);
+        }
+
+        return customers.stream()
+                .map(this::mapToCustomerResponse)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     private CustomerResponse mapToCustomerResponse(Customer customer) {
         CustomerResponse response = new CustomerResponse();
         response.setCustomerId(customer.getId());
