@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,6 +37,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/customers")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
 public class SecureCustomerController {
     private final SecureCustomerService customerService;
     private final JwtUtil jwtUtil;
@@ -167,5 +171,28 @@ public class SecureCustomerController {
 
         List<CustomerResponse> customers = customerService.getAllCustomers(userId, name);
         return ResponseEntity.ok(ApiResponse.success("Customers fetched successfully", customers));
+    }
+
+    @DeleteMapping("/{customerId}")
+    public ResponseEntity<ApiResponse<Void>> deleteCustomer(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long customerId) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        Long userId = jwtUtil.extractUserId(token);
+        String role = jwtUtil.extractRole(token);
+        
+        if (!"OWNER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only owners can delete customers", null));
+        }
+
+        customerService.deleteCustomer(userId, customerId);
+        return ResponseEntity.ok(ApiResponse.success("Customer deleted successfully"));
     }
 }

@@ -15,4 +15,5 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByCustomer_IdAndShop_ShopId(Long customerId, Long shopId);
     List<Order> findByShop_ShopId(Long shopId);
     List<Order> findByShop_ShopIdAndCreatedAtBetween(Long shopId, LocalDateTime startDate, LocalDateTime endDate);
+    List<Order> findByShop_ShopIdAndCustomer_User_NameContainingIgnoreCase(Long shopId, String customerName);
 }

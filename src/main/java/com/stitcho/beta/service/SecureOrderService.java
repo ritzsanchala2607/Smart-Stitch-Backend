@@ -17,6 +17,7 @@ import com.stitcho.beta.Repository.WorkerRepository;
 import com.stitcho.beta.dto.CreateOrderRequest;
 import com.stitcho.beta.dto.DailyOrderSummary;
 import com.stitcho.beta.dto.OrderResponse;
+import com.stitcho.beta.dto.UpdateOrderRequest;
 import com.stitcho.beta.dto.WeeklyOrderSummary;
 import com.stitcho.beta.entity.Customer;
 import com.stitcho.beta.entity.Order;
@@ -124,13 +125,22 @@ public class SecureOrderService {
         return mapToOrderResponse(order);
     }
 
-    public List<OrderResponse> getMyOrders(Long userId, String role) {
+    public List<OrderResponse> getMyOrders(Long userId, String role, String customerName) {
         List<Order> orders;
 
         if ("OWNER".equalsIgnoreCase(role)) {
             Owner owner = ownerRepository.findByUser_Id(userId)
                     .orElseThrow(() -> new RuntimeException("Owner not found"));
-            orders = orderRepository.findByShop_ShopId(owner.getShop().getShopId());
+            
+            // If customer name is provided, search by name
+            if (customerName != null && !customerName.trim().isEmpty()) {
+                orders = orderRepository.findByShop_ShopIdAndCustomer_User_NameContainingIgnoreCase(
+                    owner.getShop().getShopId(), 
+                    customerName
+                );
+            } else {
+                orders = orderRepository.findByShop_ShopId(owner.getShop().getShopId());
+            }
         } else if ("CUSTOMER".equalsIgnoreCase(role)) {
             // Find customer by userId
             Customer customer = customerRepository.findById(userId)
@@ -334,5 +344,69 @@ public class SecureOrderService {
         summary.setWorkers(workerInfos);
 
         return summary;
+    }
+
+    @Transactional
+    public void updateOrder(Long userId, String role, Long orderId, UpdateOrderRequest request) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // Access control - only owner can update orders
+        if ("OWNER".equalsIgnoreCase(role)) {
+            Owner owner = ownerRepository.findByUser_Id(userId)
+                    .orElseThrow(() -> new RuntimeException("Owner not found"));
+            if (!order.getShop().getShopId().equals(owner.getShop().getShopId())) {
+                throw new RuntimeException("Access denied");
+            }
+        } else {
+            throw new RuntimeException("Only owners can update orders");
+        }
+
+        // Update order fields
+        if (request.getDeadline() != null) {
+            order.setDeadline(request.getDeadline());
+        }
+        if (request.getTotalPrice() != null) {
+            order.setTotalPrice(request.getTotalPrice());
+        }
+        if (request.getPaidAmount() != null) {
+            order.setPaidAmount(request.getPaidAmount());
+        }
+        if (request.getPaymentStatus() != null) {
+            order.setPaymentStatus(request.getPaymentStatus());
+        }
+        if (request.getNotes() != null) {
+            order.setNotes(request.getNotes());
+        }
+
+        orderRepository.save(order);
+    }
+
+    @Transactional
+    public void deleteOrder(Long userId, String role, Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // Access control - only owner can delete orders
+        if ("OWNER".equalsIgnoreCase(role)) {
+            Owner owner = ownerRepository.findByUser_Id(userId)
+                    .orElseThrow(() -> new RuntimeException("Owner not found"));
+            if (!order.getShop().getShopId().equals(owner.getShop().getShopId())) {
+                throw new RuntimeException("Access denied");
+            }
+        } else {
+            throw new RuntimeException("Only owners can delete orders");
+        }
+
+        // Delete associated tasks first (due to foreign key constraints)
+        List<Task> tasks = taskRepository.findByOrder_OrderId(orderId);
+        taskRepository.deleteAll(tasks);
+
+        // Delete associated order items
+        List<OrderItem> items = orderItemRepository.findByOrder_OrderId(orderId);
+        orderItemRepository.deleteAll(items);
+
+        // Delete the order
+        orderRepository.delete(order);
     }
 }

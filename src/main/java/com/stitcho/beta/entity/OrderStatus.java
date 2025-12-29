@@ -5,5 +5,6 @@ public enum OrderStatus {
     CUTTING,
     STITCHING,
     IRONING,
-    COMPLETED
+    COMPLETED,
+    CANCELLED
 }

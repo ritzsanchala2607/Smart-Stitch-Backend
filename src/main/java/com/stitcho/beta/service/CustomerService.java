@@ -4,7 +4,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.stitcho.beta.Repository.CustomerMeasurementRepository;
 import com.stitcho.beta.Repository.CustomerRepository;
 import com.stitcho.beta.Repository.RoleRepository;
 import com.stitcho.beta.Repository.ShopRepository;
@@ -12,10 +11,8 @@ import com.stitcho.beta.Repository.UserRepository;
 import com.stitcho.beta.dto.CreateCustomerRequest;
 import com.stitcho.beta.dto.CreateCustomerResponse;
 import com.stitcho.beta.dto.CustomerResponse;
-import com.stitcho.beta.dto.MeasurementDto;
 import com.stitcho.beta.dto.UpdateCustomerRequest;
 import com.stitcho.beta.entity.Customer;
-import com.stitcho.beta.entity.CustomerMeasurement;
 import com.stitcho.beta.entity.Role;
 import com.stitcho.beta.entity.Shop;
 import com.stitcho.beta.entity.User;
@@ -27,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 public class CustomerService {
     private final UserRepository userRepository;
     private final CustomerRepository customerRepository;
-    private final CustomerMeasurementRepository measurementRepository;
     private final ShopRepository shopRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -62,19 +58,8 @@ public class CustomerService {
         customer.setShop(shop);
         customer = customerRepository.save(customer);
 
-        // 5️⃣ Create measurements (optional)
-        if (request.getMeasurements() != null) {
-            CustomerMeasurement measurement = new CustomerMeasurement();
-            measurement.setCustomer(customer);
-            measurement.setChest(request.getMeasurements().getChest());
-            measurement.setShoulder(request.getMeasurements().getShoulder());
-            measurement.setShirtLength(request.getMeasurements().getShirtLength());
-            measurement.setWaist(request.getMeasurements().getWaist());
-            measurement.setPantLength(request.getMeasurements().getPantLength());
-            measurement.setHip(request.getMeasurements().getHip());
-            measurement.setCustomMeasurements(request.getMeasurements().getCustomMeasurements());
-            measurementRepository.save(measurement);
-        }
+        // Note: Measurements are now managed through the Measurement API
+        // Use POST /api/measurements to create measurement profiles
 
         return new CreateCustomerResponse(customer.getId(), user.getId());
     }
@@ -96,18 +81,8 @@ public class CustomerService {
         userInfo.setProfilePicture(user.getProfilePicture());
         response.setUser(userInfo);
 
-        // Measurements
-        measurementRepository.findByCustomer_Id(customerId).ifPresent(measurement -> {
-            MeasurementDto measurementDto = new MeasurementDto();
-            measurementDto.setChest(measurement.getChest());
-            measurementDto.setShoulder(measurement.getShoulder());
-            measurementDto.setShirtLength(measurement.getShirtLength());
-            measurementDto.setWaist(measurement.getWaist());
-            measurementDto.setPantLength(measurement.getPantLength());
-            measurementDto.setHip(measurement.getHip());
-            measurementDto.setCustomMeasurements(measurement.getCustomMeasurements());
-            response.setMeasurements(measurementDto);
-        });
+        // Note: Measurements are now retrieved through the Measurement API
+        // Use GET /api/measurements/customer/{customerId}
 
         return response;
     }
@@ -132,34 +107,7 @@ public class CustomerService {
             userRepository.save(user);
         }
 
-        // Upsert measurements
-        if (request.getMeasurements() != null) {
-            CustomerMeasurement measurement = measurementRepository.findByCustomer_Id(customerId)
-                    .orElse(new CustomerMeasurement());
-
-            measurement.setCustomer(customer);
-            if (request.getMeasurements().getChest() != null) {
-                measurement.setChest(request.getMeasurements().getChest());
-            }
-            if (request.getMeasurements().getShoulder() != null) {
-                measurement.setShoulder(request.getMeasurements().getShoulder());
-            }
-            if (request.getMeasurements().getShirtLength() != null) {
-                measurement.setShirtLength(request.getMeasurements().getShirtLength());
-            }
-            if (request.getMeasurements().getWaist() != null) {
-                measurement.setWaist(request.getMeasurements().getWaist());
-            }
-            if (request.getMeasurements().getPantLength() != null) {
-                measurement.setPantLength(request.getMeasurements().getPantLength());
-            }
-            if (request.getMeasurements().getHip() != null) {
-                measurement.setHip(request.getMeasurements().getHip());
-            }
-            if (request.getMeasurements().getCustomMeasurements() != null) {
-                measurement.setCustomMeasurements(request.getMeasurements().getCustomMeasurements());
-            }
-            measurementRepository.save(measurement);
-        }
+        // Note: Measurements are now managed through the Measurement API
+        // Use PUT /api/measurements/{profileId} to update measurements
     }
 }

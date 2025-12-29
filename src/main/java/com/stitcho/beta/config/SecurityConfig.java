@@ -46,6 +46,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/workers/**").permitAll()
                         .requestMatchers("/api/customers/**").permitAll()
                         .requestMatchers("/api/shops/**").permitAll()
+                        .requestMatchers("/api/measurements/**").permitAll()
                         
                         // All other requests require authentication
                         .anyRequest().authenticated()

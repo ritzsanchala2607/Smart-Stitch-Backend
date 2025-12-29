@@ -1,0 +1,174 @@
+package com.stitcho.beta.controller;
+
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.stitcho.beta.dto.ApiResponse;
+import com.stitcho.beta.dto.MeasurementProfileRequest;
+import com.stitcho.beta.dto.MeasurementProfileResponse;
+import com.stitcho.beta.entity.DressType;
+import com.stitcho.beta.service.MeasurementService;
+import com.stitcho.beta.util.JwtUtil;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
+/**
+ * 🔐 SECURE MEASUREMENT CONTROLLER
+ * Manages measurement profiles for different dress types
+ * Owner can manage customer measurements
+ */
+@RestController
+@RequestMapping("/api/measurements")
+@RequiredArgsConstructor
+public class MeasurementController {
+    
+    private final MeasurementService measurementService;
+    private final JwtUtil jwtUtil;
+
+    /**
+     * Create measurement profile for a customer
+     * POST /api/measurements
+     */
+    @PostMapping
+    public ResponseEntity<ApiResponse<MeasurementProfileResponse>> createProfile(
+            @RequestHeader("Authorization") String authHeader,
+            @Valid @RequestBody MeasurementProfileRequest request) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        String role = jwtUtil.extractRole(token);
+        if (!"OWNER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only owners can manage measurements", null));
+        }
+
+        MeasurementProfileResponse response = measurementService.createProfile(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Measurement profile created successfully", response));
+    }
+
+    /**
+     * Get all measurement profiles for a customer
+     * GET /api/measurements/customer/{customerId}
+     */
+    @GetMapping("/customer/{customerId}")
+    public ResponseEntity<ApiResponse<List<MeasurementProfileResponse>>> getCustomerProfiles(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long customerId) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        List<MeasurementProfileResponse> responses = measurementService.getAllProfilesForCustomer(customerId);
+        return ResponseEntity.ok(ApiResponse.success("Measurement profiles fetched successfully", responses));
+    }
+
+    /**
+     * Get specific measurement profile by ID
+     * GET /api/measurements/{profileId}
+     */
+    @GetMapping("/{profileId}")
+    public ResponseEntity<ApiResponse<MeasurementProfileResponse>> getProfileById(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long profileId) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        MeasurementProfileResponse response = measurementService.getProfileById(profileId);
+        return ResponseEntity.ok(ApiResponse.success("Measurement profile fetched successfully", response));
+    }
+
+    /**
+     * Get measurement profile by dress type
+     * GET /api/measurements/customer/{customerId}/dress-type/{dressType}
+     */
+    @GetMapping("/customer/{customerId}/dress-type/{dressType}")
+    public ResponseEntity<ApiResponse<MeasurementProfileResponse>> getProfileByDressType(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long customerId,
+            @PathVariable DressType dressType) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        MeasurementProfileResponse response = measurementService.getProfile(customerId, dressType);
+        return ResponseEntity.ok(ApiResponse.success("Measurement profile fetched successfully", response));
+    }
+
+    /**
+     * Update measurement profile
+     * PUT /api/measurements/{profileId}
+     */
+    @PutMapping("/{profileId}")
+    public ResponseEntity<ApiResponse<MeasurementProfileResponse>> updateProfile(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long profileId,
+            @Valid @RequestBody MeasurementProfileRequest request) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        String role = jwtUtil.extractRole(token);
+        if (!"OWNER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only owners can update measurements", null));
+        }
+
+        MeasurementProfileResponse response = measurementService.updateProfile(profileId, request);
+        return ResponseEntity.ok(ApiResponse.success("Measurement profile updated successfully", response));
+    }
+
+    /**
+     * Delete measurement profile
+     * DELETE /api/measurements/{profileId}
+     */
+    @DeleteMapping("/{profileId}")
+    public ResponseEntity<ApiResponse<Void>> deleteProfileById(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long profileId) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        String role = jwtUtil.extractRole(token);
+        if (!"OWNER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only owners can delete measurements", null));
+        }
+
+        measurementService.deleteProfileById(profileId);
+        return ResponseEntity.ok(ApiResponse.success("Measurement profile deleted successfully"));
+    }
+}
