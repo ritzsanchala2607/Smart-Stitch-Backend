@@ -17,6 +17,7 @@ import com.stitcho.beta.Repository.WorkerRepository;
 import com.stitcho.beta.dto.CreateOrderRequest;
 import com.stitcho.beta.dto.DailyOrderSummary;
 import com.stitcho.beta.dto.OrderResponse;
+import com.stitcho.beta.dto.OrderStatusResponse;
 import com.stitcho.beta.dto.UpdateOrderRequest;
 import com.stitcho.beta.dto.WeeklyOrderSummary;
 import com.stitcho.beta.entity.Customer;
@@ -28,6 +29,7 @@ import com.stitcho.beta.entity.Shop;
 import com.stitcho.beta.entity.Task;
 import com.stitcho.beta.entity.TaskStatus;
 import com.stitcho.beta.entity.TaskType;
+import com.stitcho.beta.entity.Worker;
 import com.stitcho.beta.entity.Worker;
 
 import lombok.RequiredArgsConstructor;
@@ -91,6 +93,7 @@ public class SecureOrderService {
             task.setWorker(worker);
             task.setTaskType(TaskType.valueOf(taskReq.getTaskType().toUpperCase()));
             task.setStatus(TaskStatus.PENDING);
+            task.setAssignedAt(LocalDateTime.now());
             taskRepository.save(task);
         }
 
@@ -408,5 +411,98 @@ public class SecureOrderService {
 
         // Delete the order
         orderRepository.delete(order);
+    }
+
+    public List<OrderResponse> getOrdersByUserId(Long userId, String role) {
+        List<Order> orders;
+
+        if ("CUSTOMER".equalsIgnoreCase(role)) {
+            // Find customer by userId
+            Customer customer = customerRepository.findByUser_Id(userId)
+                    .orElseThrow(() -> new RuntimeException("Customer not found"));
+            orders = orderRepository.findByCustomer_Id(customer.getId());
+        } else if ("OWNER".equalsIgnoreCase(role)) {
+            // Owner gets all orders from their shop
+            Owner owner = ownerRepository.findByUser_Id(userId)
+                    .orElseThrow(() -> new RuntimeException("Owner not found"));
+            orders = orderRepository.findByShop_ShopId(owner.getShop().getShopId());
+        } else if ("WORKER".equalsIgnoreCase(role)) {
+            // Worker gets orders where they have tasks
+            Worker worker = workerRepository.findByUser_Id(userId)
+                    .orElseThrow(() -> new RuntimeException("Worker not found"));
+            
+            // Get all tasks for this worker
+            List<Task> workerTasks = taskRepository.findByWorker_Id(worker.getId());
+            
+            // Extract unique order IDs
+            List<Long> orderIds = workerTasks.stream()
+                    .map(task -> task.getOrder().getOrderId())
+                    .distinct()
+                    .collect(Collectors.toList());
+            
+            // Fetch orders
+            orders = orderRepository.findAllById(orderIds);
+        } else {
+            throw new RuntimeException("Invalid role");
+        }
+
+        return orders.stream()
+                .map(this::mapToOrderResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<OrderStatusResponse> getOrdersStatus(Long userId, String role) {
+        List<Order> orders;
+
+        if ("CUSTOMER".equalsIgnoreCase(role)) {
+            Customer customer = customerRepository.findByUser_Id(userId)
+                    .orElseThrow(() -> new RuntimeException("Customer not found"));
+            orders = orderRepository.findByCustomer_Id(customer.getId());
+        } else if ("OWNER".equalsIgnoreCase(role)) {
+            Owner owner = ownerRepository.findByUser_Id(userId)
+                    .orElseThrow(() -> new RuntimeException("Owner not found"));
+            orders = orderRepository.findByShop_ShopId(owner.getShop().getShopId());
+        } else if ("WORKER".equalsIgnoreCase(role)) {
+            Worker worker = workerRepository.findByUser_Id(userId)
+                    .orElseThrow(() -> new RuntimeException("Worker not found"));
+            List<Task> workerTasks = taskRepository.findByWorker_Id(worker.getId());
+            List<Long> orderIds = workerTasks.stream()
+                    .map(task -> task.getOrder().getOrderId())
+                    .distinct()
+                    .collect(Collectors.toList());
+            orders = orderRepository.findAllById(orderIds);
+        } else {
+            throw new RuntimeException("Invalid role");
+        }
+
+        return orders.stream()
+                .map(this::mapToOrderStatusResponse)
+                .collect(Collectors.toList());
+    }
+
+    private OrderStatusResponse mapToOrderStatusResponse(Order order) {
+        OrderStatusResponse response = new OrderStatusResponse();
+        response.setOrderId(order.getOrderId());
+        response.setOrderStatus(order.getStatus() != null ? order.getStatus().name() : "NEW");
+        response.setDeadline(order.getDeadline());
+        response.setCreatedAt(order.getCreatedAt());
+        
+        if (order.getCustomer() != null && order.getCustomer().getUser() != null) {
+            response.setCustomerName(order.getCustomer().getUser().getName());
+        }
+
+        // Get tasks and create combined status strings
+        List<Task> tasks = taskRepository.findByOrder_OrderId(order.getOrderId());
+        List<String> taskStatuses = tasks.stream()
+                .map(task -> {
+                    String taskType = task.getTaskType() != null ? task.getTaskType().name() : "UNKNOWN";
+                    String status = task.getStatus() != null ? task.getStatus().name() : "PENDING";
+                    return taskType + "_" + status;
+                })
+                .collect(Collectors.toList());
+        
+        response.setTaskStatuses(taskStatuses);
+
+        return response;
     }
 }

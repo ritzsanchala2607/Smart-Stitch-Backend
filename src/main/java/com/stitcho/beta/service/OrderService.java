@@ -1,5 +1,6 @@
 package com.stitcho.beta.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,6 +24,7 @@ import com.stitcho.beta.entity.Task;
 import com.stitcho.beta.entity.TaskStatus;
 import com.stitcho.beta.entity.TaskType;
 import com.stitcho.beta.entity.Worker;
+
 
 import lombok.RequiredArgsConstructor;
 
@@ -84,6 +86,7 @@ public class OrderService {
             task.setWorker(worker);
             task.setTaskType(TaskType.valueOf(taskReq.getTaskType().toUpperCase()));
             task.setStatus(TaskStatus.PENDING);
+            task.setAssignedAt(LocalDateTime.now());
             taskRepository.save(task);
         }
 

@@ -21,6 +21,7 @@ import com.stitcho.beta.dto.ApiResponse;
 import com.stitcho.beta.dto.CreateOrderRequest;
 import com.stitcho.beta.dto.DailyOrderSummary;
 import com.stitcho.beta.dto.OrderResponse;
+import com.stitcho.beta.dto.OrderStatusResponse;
 import com.stitcho.beta.dto.UpdateOrderRequest;
 import com.stitcho.beta.dto.WeeklyOrderSummary;
 import com.stitcho.beta.service.SecureOrderService;
@@ -194,5 +195,39 @@ public class SecureOrderController {
 
         orderService.deleteOrder(userId, role, orderId);
         return ResponseEntity.ok(ApiResponse.success("Order deleted successfully"));
+    }
+
+    @GetMapping("/user/me")
+    public ResponseEntity<ApiResponse<List<OrderResponse>>> getMyUserOrders(
+            @RequestHeader("Authorization") String authHeader) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        Long userId = jwtUtil.extractUserId(token);
+        String role = jwtUtil.extractRole(token);
+
+        List<OrderResponse> orders = orderService.getOrdersByUserId(userId, role);
+        return ResponseEntity.ok(ApiResponse.success("User orders fetched successfully", orders));
+    }
+
+    @GetMapping("/status")
+    public ResponseEntity<ApiResponse<List<OrderStatusResponse>>> getOrdersStatus(
+            @RequestHeader("Authorization") String authHeader) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        Long userId = jwtUtil.extractUserId(token);
+        String role = jwtUtil.extractRole(token);
+
+        List<OrderStatusResponse> statuses = orderService.getOrdersStatus(userId, role);
+        return ResponseEntity.ok(ApiResponse.success("Order statuses fetched successfully", statuses));
     }
 }
