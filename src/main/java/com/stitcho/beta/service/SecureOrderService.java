@@ -505,4 +505,30 @@ public class SecureOrderService {
 
         return response;
     }
+
+    @Transactional
+    public void deliverOrder(Long userId, String role, Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // Access control - only owner can mark orders as delivered
+        if ("OWNER".equalsIgnoreCase(role)) {
+            Owner owner = ownerRepository.findByUser_Id(userId)
+                    .orElseThrow(() -> new RuntimeException("Owner not found"));
+            if (!order.getShop().getShopId().equals(owner.getShop().getShopId())) {
+                throw new RuntimeException("Access denied");
+            }
+        } else {
+            throw new RuntimeException("Only owners can mark orders as delivered");
+        }
+
+        // Validate order is in COMPLETED status
+        if (order.getStatus() != OrderStatus.COMPLETED) {
+            throw new RuntimeException("Order must be in COMPLETED status before marking as delivered");
+        }
+
+        // Update status to DELIVERED
+        order.setStatus(OrderStatus.DELIVERED);
+        orderRepository.save(order);
+    }
 }

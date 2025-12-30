@@ -230,4 +230,27 @@ public class SecureOrderController {
         List<OrderStatusResponse> statuses = orderService.getOrdersStatus(userId, role);
         return ResponseEntity.ok(ApiResponse.success("Order statuses fetched successfully", statuses));
     }
+
+    @PutMapping("/{orderId}/deliver")
+    public ResponseEntity<ApiResponse<Void>> deliverOrder(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long orderId) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        Long userId = jwtUtil.extractUserId(token);
+        String role = jwtUtil.extractRole(token);
+        
+        if (!"OWNER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only owners can mark orders as delivered", null));
+        }
+
+        orderService.deliverOrder(userId, role, orderId);
+        return ResponseEntity.ok(ApiResponse.success("Order marked as delivered successfully"));
+    }
 }
