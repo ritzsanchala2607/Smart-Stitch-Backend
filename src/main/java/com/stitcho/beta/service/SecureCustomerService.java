@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.stitcho.beta.Repository.CustomerRepository;
+import com.stitcho.beta.Repository.OrderActivityRepository;
 import com.stitcho.beta.Repository.OrderRepository;
 import com.stitcho.beta.Repository.OwnerRepository;
 import com.stitcho.beta.Repository.RoleRepository;
@@ -19,10 +20,12 @@ import com.stitcho.beta.dto.CustomerResponse;
 import com.stitcho.beta.dto.CustomerStatsResponse;
 import com.stitcho.beta.dto.OrderResponse;
 import com.stitcho.beta.dto.PaymentHistoryResponse;
+import com.stitcho.beta.dto.RecentActivityResponse;
 import com.stitcho.beta.dto.ShopInfoResponse;
 import com.stitcho.beta.dto.UpdateCustomerRequest;
 import com.stitcho.beta.entity.Customer;
 import com.stitcho.beta.entity.Order;
+import com.stitcho.beta.entity.OrderActivity;
 import com.stitcho.beta.entity.OrderStatus;
 import com.stitcho.beta.entity.Owner;
 import com.stitcho.beta.entity.Role;
@@ -39,6 +42,7 @@ public class SecureCustomerService {
     private final RoleRepository roleRepository;
     private final OwnerRepository ownerRepository;
     private final OrderRepository orderRepository;
+    private final OrderActivityRepository orderActivityRepository;
     private final ShopRatingRepository shopRatingRepository;
     private final ShopRepository shopRepository;
     private final PasswordEncoder passwordEncoder;
@@ -367,5 +371,47 @@ public class SecureCustomerService {
         }
 
         return true;
+    }
+
+    /**
+     * Get recent activities for customer dashboard
+     */
+    public List<RecentActivityResponse> getRecentActivities(Long userId, Integer limit) {
+        // Find customer by userId
+        Customer customer = customerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        // Get recent activities with pagination
+        org.springframework.data.domain.Pageable pageable = 
+            org.springframework.data.domain.PageRequest.of(0, limit != null ? limit : 10);
+        
+        List<OrderActivity> activities = orderActivityRepository
+                .findRecentActivitiesByUserId(userId, pageable);
+
+        return activities.stream()
+                .map(this::mapToActivityResponse)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    private RecentActivityResponse mapToActivityResponse(OrderActivity activity) {
+        RecentActivityResponse response = new RecentActivityResponse();
+        response.setActivityId(activity.getId());
+        response.setOrderId(activity.getOrder().getOrderId());
+        response.setActivityType(activity.getActivityType());
+        response.setDescription(activity.getDescription());
+        response.setOldStatus(activity.getOldStatus());
+        response.setNewStatus(activity.getNewStatus());
+        response.setTimestamp(activity.getCreatedAt());
+
+        // Calculate days until deadline
+        if (activity.getOrder().getDeadline() != null) {
+            long daysUntil = java.time.temporal.ChronoUnit.DAYS.between(
+                java.time.LocalDate.now(), 
+                activity.getOrder().getDeadline()
+            );
+            response.setDaysUntilDeadline((int) daysUntil);
+        }
+
+        return response;
     }
 }

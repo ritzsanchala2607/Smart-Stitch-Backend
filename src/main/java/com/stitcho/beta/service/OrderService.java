@@ -37,6 +37,7 @@ public class OrderService {
     private final CustomerRepository customerRepository;
     private final WorkerRepository workerRepository;
     private final ShopRepository shopRepository;
+    private final ActivityLogService activityLogService;
 
     @Transactional
     public Long createOrder(Long shopId, CreateOrderRequest request) {
@@ -184,6 +185,7 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
+        OrderStatus oldStatus = order.getStatus();
         List<Task> allTasks = taskRepository.findByOrder_OrderId(orderId);
         
         // Check if all tasks are completed
@@ -211,5 +213,10 @@ public class OrderService {
         }
 
         orderRepository.save(order);
+
+        // Log status change if status actually changed
+        if (oldStatus != order.getStatus()) {
+            activityLogService.logStatusChange(order, oldStatus, order.getStatus());
+        }
     }
 }

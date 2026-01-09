@@ -43,6 +43,7 @@ public class SecureOrderService {
     private final CustomerRepository customerRepository;
     private final WorkerRepository workerRepository;
     private final OwnerRepository ownerRepository;
+    private final ActivityLogService activityLogService;
 
     @Transactional
     public Long createOrder(Long userId, CreateOrderRequest request) {
@@ -67,6 +68,9 @@ public class SecureOrderService {
         order.setNotes(request.getAdditionalNotes());
         order.setStatus(OrderStatus.NEW);
         order = orderRepository.save(order);
+
+        // Log order creation activity
+        activityLogService.logOrderCreated(order);
 
         // Create order items
         for (CreateOrderRequest.OrderItem itemReq : request.getItems()) {
@@ -528,8 +532,12 @@ public class SecureOrderService {
         }
 
         // Update status to DELIVERED
+        OrderStatus oldStatus = order.getStatus();
         order.setStatus(OrderStatus.DELIVERED);
         orderRepository.save(order);
+
+        // Log order delivered activity
+        activityLogService.logOrderDelivered(order);
     }
 
     public List<com.stitcho.beta.dto.CustomerOrderDetailResponse> getCustomerOrdersWithDetails(Long customerId) {

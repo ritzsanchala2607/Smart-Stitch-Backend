@@ -282,6 +282,33 @@ public class SecureCustomerController {
         List<OrderResponse> orders = customerService.getOrderHistory(userId, year, month, startDate, endDate);
         return ResponseEntity.ok(ApiResponse.success("Order history fetched successfully", orders));
     }
+
+    /**
+     * Get recent activities for customer dashboard
+     * GET /api/customers/me/activities
+     */
+    @GetMapping("/me/activities")
+    public ResponseEntity<ApiResponse<List<com.stitcho.beta.dto.RecentActivityResponse>>> getRecentActivities(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false, defaultValue = "10") Integer limit) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        Long userId = jwtUtil.extractUserId(token);
+        String role = jwtUtil.extractRole(token);
+        
+        if (!"CUSTOMER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only customers can access this endpoint", null));
+        }
+
+        List<com.stitcho.beta.dto.RecentActivityResponse> activities = customerService.getRecentActivities(userId, limit);
+        return ResponseEntity.ok(ApiResponse.success("Recent activities fetched successfully", activities));
+    }
 }
 
 /**
