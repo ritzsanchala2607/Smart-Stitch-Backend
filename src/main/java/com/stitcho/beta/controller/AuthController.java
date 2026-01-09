@@ -1,5 +1,8 @@
 package com.stitcho.beta.controller;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.stitcho.beta.dto.AuthResponse;
 import com.stitcho.beta.dto.LoginRequest;
 import com.stitcho.beta.dto.RegisterRequest;
+import com.stitcho.beta.dto.ResetPasswordRequest;
 import com.stitcho.beta.service.AuthService;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -58,5 +62,16 @@ public class AuthController {
         response.addHeader("Set-Cookie", cookie.toString());
         
         return ResponseEntity.ok(res);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, Object>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        String message = authService.resetPassword(request.getEmail(), request.getNewPassword());
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", message);
+        
+        return ResponseEntity.ok(response);
     }
 }

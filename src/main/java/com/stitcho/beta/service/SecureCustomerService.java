@@ -10,14 +10,20 @@ import com.stitcho.beta.Repository.CustomerRepository;
 import com.stitcho.beta.Repository.OrderRepository;
 import com.stitcho.beta.Repository.OwnerRepository;
 import com.stitcho.beta.Repository.RoleRepository;
+import com.stitcho.beta.Repository.ShopRatingRepository;
+import com.stitcho.beta.Repository.ShopRepository;
 import com.stitcho.beta.Repository.UserRepository;
 import com.stitcho.beta.dto.CreateCustomerRequest;
 import com.stitcho.beta.dto.CreateCustomerResponse;
 import com.stitcho.beta.dto.CustomerResponse;
+import com.stitcho.beta.dto.CustomerStatsResponse;
 import com.stitcho.beta.dto.OrderResponse;
+import com.stitcho.beta.dto.PaymentHistoryResponse;
+import com.stitcho.beta.dto.ShopInfoResponse;
 import com.stitcho.beta.dto.UpdateCustomerRequest;
 import com.stitcho.beta.entity.Customer;
 import com.stitcho.beta.entity.Order;
+import com.stitcho.beta.entity.OrderStatus;
 import com.stitcho.beta.entity.Owner;
 import com.stitcho.beta.entity.Role;
 import com.stitcho.beta.entity.Shop;
@@ -33,6 +39,8 @@ public class SecureCustomerService {
     private final RoleRepository roleRepository;
     private final OwnerRepository ownerRepository;
     private final OrderRepository orderRepository;
+    private final ShopRatingRepository shopRatingRepository;
+    private final ShopRepository shopRepository;
     private final PasswordEncoder passwordEncoder;
     private final SecureOrderService orderService;
 
@@ -214,5 +222,150 @@ public class SecureCustomerService {
         // Use GET /api/measurements/customer/{customerId} to get all measurement profiles
 
         return response;
+    }
+
+    // ==================== CUSTOMER DASHBOARD METHODS ====================
+
+    /**
+     * Get customer dashboard statistics
+     */
+    public CustomerStatsResponse getCustomerStats(Long userId) {
+        // Find customer by userId
+        Customer customer = customerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        // Get all orders for this customer
+        List<Order> orders = orderRepository.findByCustomer_Id(customer.getId());
+
+        // Calculate statistics
+        long totalOrders = orders.size();
+        long completedOrders = orders.stream()
+                .filter(order -> OrderStatus.COMPLETED.equals(order.getStatus()))
+                .count();
+        long activeOrders = totalOrders - completedOrders;
+
+        double totalSpent = orders.stream()
+                .filter(order -> OrderStatus.COMPLETED.equals(order.getStatus()))
+                .mapToDouble(Order::getTotalPrice)
+                .sum();
+
+        double pendingPayment = orders.stream()
+                .filter(order -> !OrderStatus.COMPLETED.equals(order.getStatus()) 
+                        && !"PAID".equalsIgnoreCase(order.getPaymentStatus()))
+                .mapToDouble(order -> order.getTotalPrice() - (order.getPaidAmount() != null ? order.getPaidAmount() : 0.0))
+                .sum();
+
+        return new CustomerStatsResponse(totalOrders, activeOrders, completedOrders, totalSpent, pendingPayment);
+    }
+
+    /**
+     * Get customer payment history
+     */
+    public List<PaymentHistoryResponse> getPaymentHistory(Long userId) {
+        // Find customer by userId
+        Customer customer = customerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        // Get all orders for this customer
+        List<Order> orders = orderRepository.findByCustomer_Id(customer.getId());
+
+        return orders.stream()
+                .map(order -> new PaymentHistoryResponse(
+                    order.getOrderId(),
+                    order.getTotalPrice(),
+                    order.getPaidAmount(),
+                    order.getPaymentStatus(),
+                    order.getCreatedAt(),
+                    order.getNotes()
+                ))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Get shop information with ratings
+     */
+    public ShopInfoResponse getShopInfo(Long shopId) {
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new RuntimeException("Shop not found"));
+
+        // Get shop ratings
+        Double avgRating = shopRatingRepository.getAverageRatingByShopId(shopId);
+        Long totalRatings = shopRatingRepository.getRatingCountByShopId(shopId);
+
+        return new ShopInfoResponse(
+            shop.getShopId(),
+            shop.getShopName(),
+            shop.getShopEmail(),
+            shop.getShopMobileNo(),
+            shop.getShopAddress(),
+            avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : 0.0,
+            totalRatings != null ? totalRatings : 0L
+        );
+    }
+
+    /**
+     * Get customer order history with date filtering
+     */
+    public List<OrderResponse> getOrderHistory(Long userId, Integer year, Integer month, 
+                                                 String startDate, String endDate) {
+        // Find customer by userId
+        Customer customer = customerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        // Get all orders for this customer
+        List<Order> orders = orderRepository.findByCustomer_Id(customer.getId());
+
+        // Filter by date if parameters provided
+        if (year != null || month != null || startDate != null || endDate != null) {
+            orders = orders.stream()
+                    .filter(order -> matchesDateFilter(order, year, month, startDate, endDate))
+                    .collect(java.util.stream.Collectors.toList());
+        }
+
+        return orders.stream()
+                .map(order -> orderService.getOrder(userId, "CUSTOMER", order.getOrderId()))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    private boolean matchesDateFilter(Order order, Integer year, Integer month, 
+                                       String startDate, String endDate) {
+        if (order.getCreatedAt() == null) {
+            return false;
+        }
+
+        // Year filter
+        if (year != null && order.getCreatedAt().getYear() != year) {
+            return false;
+        }
+
+        // Month filter
+        if (month != null && order.getCreatedAt().getMonthValue() != month) {
+            return false;
+        }
+
+        // Date range filter
+        if (startDate != null) {
+            try {
+                java.time.LocalDate start = java.time.LocalDate.parse(startDate);
+                if (order.getCreatedAt().toLocalDate().isBefore(start)) {
+                    return false;
+                }
+            } catch (Exception e) {
+                // Invalid date format, skip filter
+            }
+        }
+
+        if (endDate != null) {
+            try {
+                java.time.LocalDate end = java.time.LocalDate.parse(endDate);
+                if (order.getCreatedAt().toLocalDate().isAfter(end)) {
+                    return false;
+                }
+            } catch (Exception e) {
+                // Invalid date format, skip filter
+            }
+        }
+
+        return true;
     }
 }

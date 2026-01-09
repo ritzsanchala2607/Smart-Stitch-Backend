@@ -531,4 +531,90 @@ public class SecureOrderService {
         order.setStatus(OrderStatus.DELIVERED);
         orderRepository.save(order);
     }
+
+    public List<com.stitcho.beta.dto.CustomerOrderDetailResponse> getCustomerOrdersWithDetails(Long customerId) {
+        // Get customer
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        // Get all orders for this customer
+        List<Order> orders = orderRepository.findByCustomer_Id(customerId);
+
+        return orders.stream()
+                .map(this::mapToCustomerOrderDetailResponse)
+                .collect(Collectors.toList());
+    }
+
+    private com.stitcho.beta.dto.CustomerOrderDetailResponse mapToCustomerOrderDetailResponse(Order order) {
+        com.stitcho.beta.dto.CustomerOrderDetailResponse response = new com.stitcho.beta.dto.CustomerOrderDetailResponse();
+        
+        // Order basic info
+        response.setOrderId(order.getOrderId());
+        response.setOrderStatus(order.getStatus() != null ? order.getStatus().name() : "NEW");
+        response.setDeadline(order.getDeadline());
+        response.setTotalPrice(order.getTotalPrice());
+        response.setPaidAmount(order.getPaidAmount());
+        response.setPaymentStatus(order.getPaymentStatus());
+        response.setNotes(order.getNotes());
+        response.setCreatedAt(order.getCreatedAt());
+
+        // Shop information
+        Shop shop = order.getShop();
+        if (shop != null) {
+            com.stitcho.beta.dto.CustomerOrderDetailResponse.ShopInfo shopInfo = 
+                new com.stitcho.beta.dto.CustomerOrderDetailResponse.ShopInfo();
+            shopInfo.setShopId(shop.getShopId());
+            shopInfo.setShopName(shop.getShopName());
+            shopInfo.setShopEmail(shop.getShopEmail());
+            shopInfo.setShopContactNumber(shop.getShopMobileNo());
+            shopInfo.setShopAddress(shop.getShopAddress());
+            response.setShop(shopInfo);
+        }
+
+        // Order items
+        List<OrderItem> items = orderItemRepository.findByOrder_OrderId(order.getOrderId());
+        List<com.stitcho.beta.dto.CustomerOrderDetailResponse.OrderItemInfo> itemInfos = items.stream()
+                .map(item -> {
+                    com.stitcho.beta.dto.CustomerOrderDetailResponse.OrderItemInfo itemInfo = 
+                        new com.stitcho.beta.dto.CustomerOrderDetailResponse.OrderItemInfo();
+                    itemInfo.setItemId(item.getItemId());
+                    itemInfo.setItemName(item.getItemName());
+                    itemInfo.setQuantity(item.getQuantity());
+                    itemInfo.setPrice(item.getPrice());
+                    itemInfo.setFabricType(item.getFabricType());
+                    return itemInfo;
+                })
+                .collect(Collectors.toList());
+        response.setItems(itemInfos);
+
+        // Tasks with worker information
+        List<Task> tasks = taskRepository.findByOrder_OrderId(order.getOrderId());
+        List<com.stitcho.beta.dto.CustomerOrderDetailResponse.TaskWithWorkerInfo> taskInfos = tasks.stream()
+                .map(task -> {
+                    com.stitcho.beta.dto.CustomerOrderDetailResponse.TaskWithWorkerInfo taskInfo = 
+                        new com.stitcho.beta.dto.CustomerOrderDetailResponse.TaskWithWorkerInfo();
+                    taskInfo.setTaskId(task.getTaskId());
+                    taskInfo.setTaskType(task.getTaskType() != null ? task.getTaskType().name() : "UNKNOWN");
+                    taskInfo.setTaskStatus(task.getStatus() != null ? task.getStatus().name() : "PENDING");
+                    taskInfo.setAssignedAt(task.getAssignedAt());
+                    taskInfo.setStartedAt(task.getStartedAt());
+                    taskInfo.setCompletedAt(task.getCompletedAt());
+                    
+                    // Worker information
+                    Worker worker = task.getWorker();
+                    if (worker != null) {
+                        taskInfo.setWorkerId(worker.getId());
+                        if (worker.getUser() != null) {
+                            taskInfo.setWorkerName(worker.getUser().getName());
+                            taskInfo.setWorkerContactNumber(worker.getUser().getContactNumber());
+                        }
+                    }
+                    
+                    return taskInfo;
+                })
+                .collect(Collectors.toList());
+        response.setTasks(taskInfos);
+
+        return response;
+    }
 }

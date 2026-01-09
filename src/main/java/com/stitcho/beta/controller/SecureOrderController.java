@@ -253,4 +253,33 @@ public class SecureOrderController {
         orderService.deliverOrder(userId, role, orderId);
         return ResponseEntity.ok(ApiResponse.success("Order marked as delivered successfully"));
     }
+
+    /**
+     * Get customer orders with detailed information including shop and worker names
+     * GET /api/orders/customer/details
+     * Customer only - returns their orders with shop info and task-wise worker details
+     */
+    @GetMapping("/customer/details")
+    public ResponseEntity<ApiResponse<List<com.stitcho.beta.dto.CustomerOrderDetailResponse>>> getCustomerOrdersWithDetails(
+            @RequestHeader("Authorization") String authHeader) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        String role = jwtUtil.extractRole(token);
+        Long customerId = jwtUtil.extractCustomerId(token);
+        
+        if (!"CUSTOMER".equalsIgnoreCase(role) || customerId == null) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only customers can access this endpoint", null));
+        }
+
+        List<com.stitcho.beta.dto.CustomerOrderDetailResponse> orders = 
+            orderService.getCustomerOrdersWithDetails(customerId);
+        
+        return ResponseEntity.ok(ApiResponse.success("Customer orders with details fetched successfully", orders));
+    }
 }

@@ -21,7 +21,10 @@ import com.stitcho.beta.dto.ApiResponse;
 import com.stitcho.beta.dto.CreateCustomerRequest;
 import com.stitcho.beta.dto.CreateCustomerResponse;
 import com.stitcho.beta.dto.CustomerResponse;
+import com.stitcho.beta.dto.CustomerStatsResponse;
 import com.stitcho.beta.dto.OrderResponse;
+import com.stitcho.beta.dto.PaymentHistoryResponse;
+import com.stitcho.beta.dto.ShopInfoResponse;
 import com.stitcho.beta.dto.UpdateCustomerRequest;
 import com.stitcho.beta.service.SecureCustomerService;
 import com.stitcho.beta.util.JwtUtil;
@@ -194,5 +197,121 @@ public class SecureCustomerController {
 
         customerService.deleteCustomer(userId, customerId);
         return ResponseEntity.ok(ApiResponse.success("Customer deleted successfully"));
+    }
+
+    // ==================== CUSTOMER DASHBOARD ENDPOINTS ====================
+
+    /**
+     * Get customer dashboard statistics
+     * GET /api/customers/me/stats
+     */
+    @GetMapping("/me/stats")
+    public ResponseEntity<ApiResponse<CustomerStatsResponse>> getCustomerStats(
+            @RequestHeader("Authorization") String authHeader) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        Long userId = jwtUtil.extractUserId(token);
+        String role = jwtUtil.extractRole(token);
+        
+        if (!"CUSTOMER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only customers can access this endpoint", null));
+        }
+
+        CustomerStatsResponse stats = customerService.getCustomerStats(userId);
+        return ResponseEntity.ok(ApiResponse.success("Customer statistics fetched successfully", stats));
+    }
+
+    /**
+     * Get customer payment history
+     * GET /api/customers/me/payments
+     */
+    @GetMapping("/me/payments")
+    public ResponseEntity<ApiResponse<List<PaymentHistoryResponse>>> getPaymentHistory(
+            @RequestHeader("Authorization") String authHeader) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        Long userId = jwtUtil.extractUserId(token);
+        String role = jwtUtil.extractRole(token);
+        
+        if (!"CUSTOMER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only customers can access this endpoint", null));
+        }
+
+        List<PaymentHistoryResponse> payments = customerService.getPaymentHistory(userId);
+        return ResponseEntity.ok(ApiResponse.success("Payment history fetched successfully", payments));
+    }
+
+    /**
+     * Get customer order history with date filtering
+     * GET /api/customers/me/orders/history
+     */
+    @GetMapping("/me/orders/history")
+    public ResponseEntity<ApiResponse<List<OrderResponse>>> getOrderHistory(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        Long userId = jwtUtil.extractUserId(token);
+        String role = jwtUtil.extractRole(token);
+        
+        if (!"CUSTOMER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only customers can access this endpoint", null));
+        }
+
+        List<OrderResponse> orders = customerService.getOrderHistory(userId, year, month, startDate, endDate);
+        return ResponseEntity.ok(ApiResponse.success("Order history fetched successfully", orders));
+    }
+}
+
+/**
+ * 🔐 SHOP INFO CONTROLLER
+ * Public endpoint for shop information
+ */
+@RestController
+@RequestMapping("/api/shops")
+@RequiredArgsConstructor
+@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.OPTIONS})
+class ShopInfoController {
+    private final SecureCustomerService customerService;
+    private final JwtUtil jwtUtil;
+
+    /**
+     * Get shop information with ratings
+     * GET /api/shops/{shopId}
+     */
+    @GetMapping("/{shopId}")
+    public ResponseEntity<ApiResponse<ShopInfoResponse>> getShopInfo(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long shopId) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        ShopInfoResponse shopInfo = customerService.getShopInfo(shopId);
+        return ResponseEntity.ok(ApiResponse.success("Shop information fetched successfully", shopInfo));
     }
 }

@@ -66,6 +66,7 @@ public class MeasurementController {
     /**
      * Get all measurement profiles for a customer
      * GET /api/measurements/customer/{customerId}
+     * Access: Owner (all customers) or Customer (their own only)
      */
     @GetMapping("/customer/{customerId}")
     public ResponseEntity<ApiResponse<List<MeasurementProfileResponse>>> getCustomerProfiles(
@@ -78,6 +79,17 @@ public class MeasurementController {
                     .body(ApiResponse.success("Invalid or missing token", null));
         }
 
+        String role = jwtUtil.extractRole(token);
+        
+        // If customer, verify they're accessing their own measurements
+        if ("CUSTOMER".equalsIgnoreCase(role)) {
+            Long tokenCustomerId = jwtUtil.extractCustomerId(token);
+            if (tokenCustomerId == null || !tokenCustomerId.equals(customerId)) {
+                return ResponseEntity.status(403)
+                        .body(ApiResponse.success("Customers can only view their own measurements", null));
+            }
+        }
+
         List<MeasurementProfileResponse> responses = measurementService.getAllProfilesForCustomer(customerId);
         return ResponseEntity.ok(ApiResponse.success("Measurement profiles fetched successfully", responses));
     }
@@ -85,6 +97,7 @@ public class MeasurementController {
     /**
      * Get specific measurement profile by ID
      * GET /api/measurements/{profileId}
+     * Access: Owner (all profiles) or Customer (their own only)
      */
     @GetMapping("/{profileId}")
     public ResponseEntity<ApiResponse<MeasurementProfileResponse>> getProfileById(
@@ -97,13 +110,25 @@ public class MeasurementController {
                     .body(ApiResponse.success("Invalid or missing token", null));
         }
 
+        String role = jwtUtil.extractRole(token);
         MeasurementProfileResponse response = measurementService.getProfileById(profileId);
+        
+        // If customer, verify they're accessing their own measurements
+        if ("CUSTOMER".equalsIgnoreCase(role)) {
+            Long tokenCustomerId = jwtUtil.extractCustomerId(token);
+            if (tokenCustomerId == null || !tokenCustomerId.equals(response.getCustomerId())) {
+                return ResponseEntity.status(403)
+                        .body(ApiResponse.success("Customers can only view their own measurements", null));
+            }
+        }
+
         return ResponseEntity.ok(ApiResponse.success("Measurement profile fetched successfully", response));
     }
 
     /**
      * Get measurement profile by dress type
      * GET /api/measurements/customer/{customerId}/dress-type/{dressType}
+     * Access: Owner (all customers) or Customer (their own only)
      */
     @GetMapping("/customer/{customerId}/dress-type/{dressType}")
     public ResponseEntity<ApiResponse<MeasurementProfileResponse>> getProfileByDressType(
@@ -117,8 +142,50 @@ public class MeasurementController {
                     .body(ApiResponse.success("Invalid or missing token", null));
         }
 
+        String role = jwtUtil.extractRole(token);
+        
+        // If customer, verify they're accessing their own measurements
+        if ("CUSTOMER".equalsIgnoreCase(role)) {
+            Long tokenCustomerId = jwtUtil.extractCustomerId(token);
+            if (tokenCustomerId == null || !tokenCustomerId.equals(customerId)) {
+                return ResponseEntity.status(403)
+                        .body(ApiResponse.success("Customers can only view their own measurements", null));
+            }
+        }
+
         MeasurementProfileResponse response = measurementService.getProfile(customerId, dressType);
         return ResponseEntity.ok(ApiResponse.success("Measurement profile fetched successfully", response));
+    }
+
+    /**
+     * Get my measurement profiles (Customer convenience endpoint)
+     * GET /api/measurements/me
+     * Access: Customer only
+     */
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<List<MeasurementProfileResponse>>> getMyProfiles(
+            @RequestHeader("Authorization") String authHeader) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        String role = jwtUtil.extractRole(token);
+        if (!"CUSTOMER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only customers can use this endpoint", null));
+        }
+
+        Long customerId = jwtUtil.extractCustomerId(token);
+        if (customerId == null) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Customer ID not found in token", null));
+        }
+
+        List<MeasurementProfileResponse> responses = measurementService.getAllProfilesForCustomer(customerId);
+        return ResponseEntity.ok(ApiResponse.success("Your measurement profiles fetched successfully", responses));
     }
 
     /**

@@ -118,4 +118,19 @@ public class AuthService {
         resp.setJwt(token);
         return resp;
     }
+
+    @Transactional
+    public String resetPassword(String email, String newPassword) {
+        // Find user by email
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            throw new IllegalArgumentException("User with this email does not exist.");
+        }
+
+        // Update password with encoded version
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        return "Password reset successfully";
+    }
 }
