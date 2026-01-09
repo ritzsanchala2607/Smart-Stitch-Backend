@@ -126,6 +126,29 @@ public class MeasurementService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<MeasurementProfileResponse> getAllProfilesForCustomerByUserId(Long userId) {
+        Customer customer = customerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Customer not found for user ID: " + userId));
+        
+        List<MeasurementProfile> profiles = profileRepository.findByCustomer_Id(customer.getId());
+        return profiles.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public MeasurementProfileResponse getProfileByUserId(Long userId, DressType dressType) {
+        Customer customer = customerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Customer not found for user ID: " + userId));
+        
+        MeasurementProfile profile = profileRepository
+                .findByCustomer_IdAndDressType(customer.getId(), dressType)
+                .orElseThrow(() -> new RuntimeException("Measurement profile not found"));
+
+        return mapToResponse(profile);
+    }
+
     @Transactional
     public MeasurementProfileResponse updateProfile(Long profileId, MeasurementProfileRequest request) {
         MeasurementProfile profile = profileRepository.findById(profileId)

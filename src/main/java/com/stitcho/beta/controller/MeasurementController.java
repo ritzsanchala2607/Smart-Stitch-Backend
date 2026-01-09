@@ -64,14 +64,14 @@ public class MeasurementController {
     }
 
     /**
-     * Get all measurement profiles for a customer
-     * GET /api/measurements/customer/{customerId}
+     * Get all measurement profiles for a customer by userId
+     * GET /api/measurements/customer/{userId}
      * Access: Owner (all customers) or Customer (their own only)
      */
-    @GetMapping("/customer/{customerId}")
+    @GetMapping("/customer/{userId}")
     public ResponseEntity<ApiResponse<List<MeasurementProfileResponse>>> getCustomerProfiles(
             @RequestHeader("Authorization") String authHeader,
-            @PathVariable Long customerId) {
+            @PathVariable Long userId) {
         
         String token = jwtUtil.getTokenFromHeader(authHeader);
         if (token == null || !jwtUtil.validateToken(token)) {
@@ -83,14 +83,14 @@ public class MeasurementController {
         
         // If customer, verify they're accessing their own measurements
         if ("CUSTOMER".equalsIgnoreCase(role)) {
-            Long tokenCustomerId = jwtUtil.extractCustomerId(token);
-            if (tokenCustomerId == null || !tokenCustomerId.equals(customerId)) {
+            Long tokenUserId = jwtUtil.extractUserId(token);
+            if (tokenUserId == null || !tokenUserId.equals(userId)) {
                 return ResponseEntity.status(403)
                         .body(ApiResponse.success("Customers can only view their own measurements", null));
             }
         }
 
-        List<MeasurementProfileResponse> responses = measurementService.getAllProfilesForCustomer(customerId);
+        List<MeasurementProfileResponse> responses = measurementService.getAllProfilesForCustomerByUserId(userId);
         return ResponseEntity.ok(ApiResponse.success("Measurement profiles fetched successfully", responses));
     }
 
@@ -126,14 +126,14 @@ public class MeasurementController {
     }
 
     /**
-     * Get measurement profile by dress type
-     * GET /api/measurements/customer/{customerId}/dress-type/{dressType}
+     * Get measurement profile by dress type using userId
+     * GET /api/measurements/customer/{userId}/dress-type/{dressType}
      * Access: Owner (all customers) or Customer (their own only)
      */
-    @GetMapping("/customer/{customerId}/dress-type/{dressType}")
+    @GetMapping("/customer/{userId}/dress-type/{dressType}")
     public ResponseEntity<ApiResponse<MeasurementProfileResponse>> getProfileByDressType(
             @RequestHeader("Authorization") String authHeader,
-            @PathVariable Long customerId,
+            @PathVariable Long userId,
             @PathVariable DressType dressType) {
         
         String token = jwtUtil.getTokenFromHeader(authHeader);
@@ -146,14 +146,14 @@ public class MeasurementController {
         
         // If customer, verify they're accessing their own measurements
         if ("CUSTOMER".equalsIgnoreCase(role)) {
-            Long tokenCustomerId = jwtUtil.extractCustomerId(token);
-            if (tokenCustomerId == null || !tokenCustomerId.equals(customerId)) {
+            Long tokenUserId = jwtUtil.extractUserId(token);
+            if (tokenUserId == null || !tokenUserId.equals(userId)) {
                 return ResponseEntity.status(403)
                         .body(ApiResponse.success("Customers can only view their own measurements", null));
             }
         }
 
-        MeasurementProfileResponse response = measurementService.getProfile(customerId, dressType);
+        MeasurementProfileResponse response = measurementService.getProfileByUserId(userId, dressType);
         return ResponseEntity.ok(ApiResponse.success("Measurement profile fetched successfully", response));
     }
 
