@@ -215,6 +215,7 @@ public class SecureCustomerService {
         if (customer.getUser() != null) {
             User user = customer.getUser();
             CustomerResponse.UserInfo userInfo = new CustomerResponse.UserInfo();
+            userInfo.setUserId(user.getId());
             userInfo.setName(user.getName());
             userInfo.setEmail(user.getEmail());
             userInfo.setContactNumber(user.getContactNumber());

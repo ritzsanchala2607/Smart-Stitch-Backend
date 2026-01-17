@@ -22,6 +22,7 @@ public class CustomerResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class UserInfo {
+        private Long userId;
         private String name;
         private String email;
         private String contactNumber;
