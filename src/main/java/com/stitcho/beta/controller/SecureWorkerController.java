@@ -105,4 +105,26 @@ public class SecureWorkerController {
         List<Task> tasks = workerService.getMyTasks(userId);
         return ResponseEntity.ok(ApiResponse.success("Tasks fetched successfully", tasks));
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<WorkerResponse>> getMyProfile(
+            @RequestHeader("Authorization") String authHeader) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        Long userId = jwtUtil.extractUserId(token);
+        String role = jwtUtil.extractRole(token);
+        
+        if (!"WORKER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only workers can view their profile", null));
+        }
+
+        WorkerResponse worker = workerService.getMyProfile(userId);
+        return ResponseEntity.ok(ApiResponse.success("Worker profile fetched successfully", worker));
+    }
 }

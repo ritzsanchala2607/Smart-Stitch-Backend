@@ -107,6 +107,13 @@ public class SecureWorkerService {
         return taskRepository.findByWorker_Id(worker.getId());
     }
 
+    public WorkerResponse getMyProfile(Long userId) {
+        Worker worker = workerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Worker not found"));
+        
+        return mapToWorkerResponse(worker);
+    }
+
     private WorkerResponse mapToWorkerResponse(Worker worker) {
         WorkerResponse response = new WorkerResponse();
         response.setWorkerId(worker.getId());
