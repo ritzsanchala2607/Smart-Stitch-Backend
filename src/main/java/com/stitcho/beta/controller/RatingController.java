@@ -7,11 +7,11 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -43,12 +43,19 @@ public class RatingController {
      */
     @PostMapping("/shop")
     public ResponseEntity<Map<String, Object>> rateShop(
-            @Valid @RequestBody ShopRatingRequest request,
-            Authentication authentication) {
+            @RequestHeader("Authorization") String authHeader,
+            @Valid @RequestBody ShopRatingRequest request) {
         
         try {
+            // Extract and validate JWT token
+            String token = jwtUtil.getTokenFromHeader(authHeader);
+            if (token == null || !jwtUtil.validateToken(token)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(createErrorResponse("Invalid or missing token"));
+            }
+
             // Extract customer ID from JWT
-            Long customerId = jwtUtil.extractCustomerId(authentication.getName());
+            Long customerId = jwtUtil.extractCustomerId(token);
             if (customerId == null) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(createErrorResponse("Only customers can rate shops"));
@@ -121,12 +128,19 @@ public class RatingController {
      */
     @PostMapping("/worker")
     public ResponseEntity<Map<String, Object>> rateWorker(
-            @Valid @RequestBody WorkerRatingRequest request,
-            Authentication authentication) {
+            @RequestHeader("Authorization") String authHeader,
+            @Valid @RequestBody WorkerRatingRequest request) {
         
         try {
+            // Extract and validate JWT token
+            String token = jwtUtil.getTokenFromHeader(authHeader);
+            if (token == null || !jwtUtil.validateToken(token)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(createErrorResponse("Invalid or missing token"));
+            }
+
             // Extract customer ID from JWT
-            Long customerId = jwtUtil.extractCustomerId(authentication.getName());
+            Long customerId = jwtUtil.extractCustomerId(token);
             if (customerId == null) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(createErrorResponse("Only customers can rate workers"));
@@ -198,10 +212,18 @@ public class RatingController {
      * GET /api/ratings/my-orders
      */
     @GetMapping("/my-orders")
-    public ResponseEntity<Map<String, Object>> getMyOrdersForRating(Authentication authentication) {
+    public ResponseEntity<Map<String, Object>> getMyOrdersForRating(
+            @RequestHeader("Authorization") String authHeader) {
         try {
+            // Extract and validate JWT token
+            String token = jwtUtil.getTokenFromHeader(authHeader);
+            if (token == null || !jwtUtil.validateToken(token)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(createErrorResponse("Invalid or missing token"));
+            }
+
             // Extract customer ID from JWT
-            Long customerId = jwtUtil.extractCustomerId(authentication.getName());
+            Long customerId = jwtUtil.extractCustomerId(token);
             if (customerId == null) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(createErrorResponse("Only customers can access this endpoint"));

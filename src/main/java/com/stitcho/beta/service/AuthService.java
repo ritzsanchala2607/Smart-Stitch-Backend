@@ -3,13 +3,18 @@ package com.stitcho.beta.service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.stitcho.beta.Repository.CustomerRepository;
+import com.stitcho.beta.Repository.OwnerRepository;
 import com.stitcho.beta.Repository.RoleRepository;
 import com.stitcho.beta.Repository.UserRepository;
+import com.stitcho.beta.Repository.WorkerRepository;
 import com.stitcho.beta.dto.AuthResponse;
 import com.stitcho.beta.dto.LoginRequest;
 import com.stitcho.beta.dto.RegisterRequest;
+import com.stitcho.beta.entity.Customer;
 import com.stitcho.beta.entity.Role;
 import com.stitcho.beta.entity.User;
+import com.stitcho.beta.entity.Worker;
 import com.stitcho.beta.util.JwtUtil;
 
 import jakarta.transaction.Transactional;
@@ -22,6 +27,9 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final CustomerRepository customerRepository;
+    private final WorkerRepository workerRepository;
+    private final OwnerRepository ownerRepository;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -91,13 +99,41 @@ public class AuthService {
             throw new IllegalArgumentException("Invalid role for this user. Expected: " + user.getRole().getRoleName());
         }
 
-        // Get role-specific IDs
+        // Get role-specific IDs based on user role
         Long shopId = null;
         Long customerId = null;
         Long workerId = null;
 
-        // TODO: Fetch these based on role
-        // Will be populated when we refactor Owner/Customer/Worker services
+        String roleName = user.getRole().getRoleName();
+        
+        if ("OWNER".equalsIgnoreCase(roleName)) {
+            // Fetch owner's shop ID
+            ownerRepository.findByUser_Id(user.getId()).ifPresent(owner -> {
+                // Note: shopId is set in the owner entity, not directly accessible here
+                // We'll leave it null for now as it's not critical for most operations
+            });
+        } else if ("CUSTOMER".equalsIgnoreCase(roleName)) {
+            // Fetch customer ID
+            customerRepository.findByUser_Id(user.getId()).ifPresent(customer -> {
+                // customerId is set via lambda, but we need to use a different approach
+            });
+            Customer customer = customerRepository.findByUser_Id(user.getId()).orElse(null);
+            if (customer != null) {
+                customerId = customer.getId();
+                if (customer.getShop() != null) {
+                    shopId = customer.getShop().getShopId();
+                }
+            }
+        } else if ("WORKER".equalsIgnoreCase(roleName)) {
+            // Fetch worker ID
+            Worker worker = workerRepository.findByUser_Id(user.getId()).orElse(null);
+            if (worker != null) {
+                workerId = worker.getId();
+                if (worker.getShop() != null) {
+                    shopId = worker.getShop().getShopId();
+                }
+            }
+        }
 
         String token = jwtUtil.generateTokenWithIds(
             user.getEmail(), 

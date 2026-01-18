@@ -64,9 +64,9 @@ public class RatingService {
             throw new RuntimeException("Order does not belong to this customer");
         }
 
-        // Verify order is completed
-        if (order.getStatus() != OrderStatus.COMPLETED) {
-            throw new RuntimeException("Can only rate completed orders");
+        // Verify order is completed or delivered
+        if (order.getStatus() != OrderStatus.COMPLETED && order.getStatus() != OrderStatus.DELIVERED) {
+            throw new RuntimeException("Can only rate completed or delivered orders");
         }
 
         // Check if rating already exists
@@ -122,9 +122,9 @@ public class RatingService {
             throw new RuntimeException("Order does not belong to this customer");
         }
 
-        // Verify order is completed
-        if (order.getStatus() != OrderStatus.COMPLETED) {
-            throw new RuntimeException("Can only rate completed orders");
+        // Verify order is completed or delivered
+        if (order.getStatus() != OrderStatus.COMPLETED && order.getStatus() != OrderStatus.DELIVERED) {
+            throw new RuntimeException("Can only rate completed or delivered orders");
         }
 
         // Validate worker
