@@ -58,10 +58,17 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("*"));
+        
+        // Allow specific origins for production and development
+        configuration.setAllowedOrigins(Arrays.asList(
+            "https://smart-stitch-frontend.onrender.com",  // Production frontend
+            "http://localhost:3000",                        // Local development
+            "http://localhost:5173"                         // Vite development server
+        ));
+        
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(false);
+        configuration.setAllowCredentials(true);  // Enable credentials for cookies/auth headers
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
