@@ -108,15 +108,12 @@ public class AuthService {
         
         if ("OWNER".equalsIgnoreCase(roleName)) {
             // Fetch owner's shop ID
-            ownerRepository.findByUser_Id(user.getId()).ifPresent(owner -> {
-                // Note: shopId is set in the owner entity, not directly accessible here
-                // We'll leave it null for now as it's not critical for most operations
-            });
+            var owner = ownerRepository.findByUser_Id(user.getId()).orElse(null);
+            if (owner != null && owner.getShop() != null) {
+                shopId = owner.getShop().getShopId();
+            }
         } else if ("CUSTOMER".equalsIgnoreCase(roleName)) {
-            // Fetch customer ID
-            customerRepository.findByUser_Id(user.getId()).ifPresent(customer -> {
-                // customerId is set via lambda, but we need to use a different approach
-            });
+            // Fetch customer ID and shop ID
             Customer customer = customerRepository.findByUser_Id(user.getId()).orElse(null);
             if (customer != null) {
                 customerId = customer.getId();
@@ -125,7 +122,7 @@ public class AuthService {
                 }
             }
         } else if ("WORKER".equalsIgnoreCase(roleName)) {
-            // Fetch worker ID
+            // Fetch worker ID and shop ID
             Worker worker = workerRepository.findByUser_Id(user.getId()).orElse(null);
             if (worker != null) {
                 workerId = worker.getId();
@@ -152,6 +149,9 @@ public class AuthService {
         resp.setName(user.getName());
         resp.setRole(user.getRole().getRoleName());
         resp.setJwt(token);
+        resp.setShopId(shopId);
+        resp.setCustomerId(customerId);
+        resp.setWorkerId(workerId);
         return resp;
     }
 

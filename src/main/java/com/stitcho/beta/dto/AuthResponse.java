@@ -16,4 +16,7 @@ public class AuthResponse {
     private String name;
     private String role;
     private String jwt;
+    private Long shopId;
+    private Long customerId;
+    private Long workerId;
 }
