@@ -19,6 +19,7 @@ import com.stitcho.beta.entity.DressType;
 import com.stitcho.beta.entity.MeasurementProfile;
 import com.stitcho.beta.entity.MeasurementValue;
 
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -28,6 +29,7 @@ public class MeasurementService {
     private final MeasurementProfileRepository profileRepository;
     private final MeasurementValueRepository valueRepository;
     private final CustomerRepository customerRepository;
+    private final EntityManager entityManager;
 
     @Transactional
     public MeasurementProfileResponse createProfile(MeasurementProfileRequest request) {
@@ -161,9 +163,14 @@ public class MeasurementService {
 
         // Update measurements if provided
         if (request.getMeasurements() != null && !request.getMeasurements().isEmpty()) {
-            // Clear existing measurements
+            // Delete existing measurement values from database
+            valueRepository.deleteByProfile_Id(profileId);
+            
+            // Flush to ensure delete is executed before insert
+            entityManager.flush();
+            
+            // Clear the collection in memory
             profile.getMeasurements().clear();
-            profileRepository.save(profile);
 
             // Add new measurements
             for (Map.Entry<String, Double> entry : request.getMeasurements().entrySet()) {
