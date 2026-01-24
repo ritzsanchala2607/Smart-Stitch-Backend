@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 
 import com.stitcho.beta.entity.MeasurementValue;
@@ -21,8 +22,10 @@ public interface MeasurementValueRepository extends JpaRepository<MeasurementVal
     List<MeasurementValue> findByMeasurementKey(String measurementKey);
     
     // Delete all values for a profile
+    @Modifying
     void deleteByProfile_Id(Long profileId);
     
     // Delete specific value
+    @Modifying
     void deleteByProfile_IdAndMeasurementKey(Long profileId, String measurementKey);
 }
