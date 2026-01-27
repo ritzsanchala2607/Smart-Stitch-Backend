@@ -1,0 +1,23 @@
+name: Keep Render Services Alive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"  # Runs every 10 minutes
+  workflow_dispatch:  # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Backend Service
+        run: |
+          echo "Pinging backend at $(date)"
+          curl -I https://smart-stitch-backend.onrender.com || echo "Backend ping completed"
+          
+      - name: Ping Frontend Service
+        run: |
+          echo "Pinging frontend at $(date)"
+          curl -I https://smart-stitch-frontend.onrender.com || echo "Frontend ping completed"
+          
+      - name: Log status
+        run: echo "✅ Keep-alive pings completed for both services"
