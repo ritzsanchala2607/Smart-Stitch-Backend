@@ -16,6 +16,8 @@ public class CustomerResponse {
     private UserInfo user;
     private MeasurementDto measurements;
     private LocalDateTime createdAt;
+    private Long totalOrders;
+    private Double totalSpent;
 
     @Getter
     @Setter

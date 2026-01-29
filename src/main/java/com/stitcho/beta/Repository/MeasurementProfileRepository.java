@@ -30,6 +30,9 @@ public interface MeasurementProfileRepository extends JpaRepository<MeasurementP
     // Check if profile exists
     boolean existsByCustomer_IdAndDressType(Long customerId, DressType dressType);
     
+    // Delete all profiles for a customer
+    void deleteByCustomer_Id(Long customerId);
+    
     // Delete by customer and dress type
     void deleteByCustomer_IdAndDressType(Long customerId, DressType dressType);
 }

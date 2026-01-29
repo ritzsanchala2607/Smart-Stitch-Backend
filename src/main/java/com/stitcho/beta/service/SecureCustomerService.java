@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.stitcho.beta.Repository.CustomerRepository;
+import com.stitcho.beta.Repository.MeasurementProfileRepository;
 import com.stitcho.beta.Repository.OrderActivityRepository;
 import com.stitcho.beta.Repository.OrderRepository;
 import com.stitcho.beta.Repository.OwnerRepository;
@@ -45,6 +46,7 @@ public class SecureCustomerService {
     private final OrderActivityRepository orderActivityRepository;
     private final ShopRatingRepository shopRatingRepository;
     private final ShopRepository shopRepository;
+    private final MeasurementProfileRepository measurementProfileRepository;
     private final PasswordEncoder passwordEncoder;
     private final SecureOrderService orderService;
 
@@ -199,7 +201,10 @@ public class SecureCustomerService {
             throw new RuntimeException("Access denied: Customer does not belong to your shop");
         }
 
-        // Delete customer (cascade will handle orders, tasks, measurement profiles, etc.)
+        // Delete measurement profiles first (to avoid foreign key constraint violation)
+        measurementProfileRepository.deleteByCustomer_Id(customerId);
+        
+        // Delete customer (cascade will handle orders, tasks, etc.)
         customerRepository.delete(customer);
         
         // Delete associated user account
@@ -222,6 +227,16 @@ public class SecureCustomerService {
             userInfo.setProfilePicture(user.getProfilePicture());
             response.setUser(userInfo);
         }
+
+        // Calculate statistics
+        List<Order> orders = orderRepository.findByCustomer_Id(customer.getId());
+        response.setTotalOrders((long) orders.size());
+        
+        double totalSpent = orders.stream()
+                .filter(order -> OrderStatus.COMPLETED.equals(order.getStatus()))
+                .mapToDouble(Order::getTotalPrice)
+                .sum();
+        response.setTotalSpent(totalSpent);
 
         // Note: Measurements are now retrieved through the Measurement API
         // Use GET /api/measurements/customer/{customerId} to get all measurement profiles
