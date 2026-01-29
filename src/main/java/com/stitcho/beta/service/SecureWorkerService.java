@@ -53,6 +53,11 @@ public class SecureWorkerService {
         Role workerRole = roleRepository.findById(request.getUser().getRoleId())
                 .orElseThrow(() -> new RuntimeException("Role not found"));
 
+        // Validate that the role is actually WORKER
+        if (!"WORKER".equalsIgnoreCase(workerRole.getRoleName())) {
+            throw new IllegalArgumentException("Invalid role. Must be WORKER role (roleId=2).");
+        }
+
         User user = new User();
         user.setName(request.getUser().getName());
         user.setEmail(request.getUser().getEmail());
@@ -112,6 +117,27 @@ public class SecureWorkerService {
                 .orElseThrow(() -> new RuntimeException("Worker not found"));
         
         return mapToWorkerResponse(worker);
+    }
+
+    @Transactional
+    public void deleteWorker(Long userId, Long workerId) {
+        // Get owner's shop
+        Owner owner = ownerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Owner not found"));
+        
+        // Get worker and verify it belongs to owner's shop
+        Worker worker = workerRepository.findById(workerId)
+                .orElseThrow(() -> new RuntimeException("Worker not found"));
+        
+        if (!worker.getShop().getShopId().equals(owner.getShop().getShopId())) {
+            throw new RuntimeException("Access denied: Worker does not belong to your shop");
+        }
+
+        // Delete worker (cascade will handle rates, tasks, etc.)
+        workerRepository.delete(worker);
+        
+        // Delete associated user account
+        userRepository.delete(worker.getUser());
     }
 
     private WorkerResponse mapToWorkerResponse(Worker worker) {

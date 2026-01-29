@@ -4,9 +4,11 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.stitcho.beta.entity.DressType;
 import com.stitcho.beta.entity.MeasurementProfile;
@@ -31,8 +33,12 @@ public interface MeasurementProfileRepository extends JpaRepository<MeasurementP
     boolean existsByCustomer_IdAndDressType(Long customerId, DressType dressType);
     
     // Delete all profiles for a customer
+    @Modifying
+    @Transactional
     void deleteByCustomer_Id(Long customerId);
     
     // Delete by customer and dress type
+    @Modifying
+    @Transactional
     void deleteByCustomer_IdAndDressType(Long customerId, DressType dressType);
 }
