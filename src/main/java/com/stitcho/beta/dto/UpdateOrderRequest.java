@@ -17,4 +17,5 @@ public class UpdateOrderRequest {
     private Double paidAmount;
     private String paymentStatus;
     private String notes;
+    private String status;  // Order status: NEW, CUTTING, STITCHING, IRONING, COMPLETED, DELIVERED, CANCELLED
 }

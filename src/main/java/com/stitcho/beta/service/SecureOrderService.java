@@ -385,6 +385,14 @@ public class SecureOrderService {
         if (request.getNotes() != null) {
             order.setNotes(request.getNotes());
         }
+        if (request.getStatus() != null) {
+            try {
+                OrderStatus orderStatus = OrderStatus.valueOf(request.getStatus().toUpperCase());
+                order.setStatus(orderStatus);
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Invalid order status: " + request.getStatus());
+            }
+        }
 
         orderRepository.save(order);
     }
