@@ -413,7 +413,11 @@ public class SecureOrderService {
             throw new RuntimeException("Only owners can delete orders");
         }
 
-        // Delete associated tasks first (due to foreign key constraints)
+        // Delete associated order activities first (due to foreign key constraints)
+        List<OrderActivity> activities = orderActivityRepository.findByOrder_OrderIdOrderByCreatedAtDesc(orderId);
+        orderActivityRepository.deleteAll(activities);
+
+        // Delete associated tasks (due to foreign key constraints)
         List<Task> tasks = taskRepository.findByOrder_OrderId(orderId);
         taskRepository.deleteAll(tasks);
 
