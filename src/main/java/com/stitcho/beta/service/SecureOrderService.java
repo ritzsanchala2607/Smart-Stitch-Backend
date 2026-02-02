@@ -63,7 +63,7 @@ public class SecureOrderService {
         order.setShop(shop);
         order.setDeadline(request.getDeadline());
         order.setTotalPrice(request.getTotalPrice());
-        order.setPaidAmount(request.getAdvancePayment());
+        order.setPaidAmount(request.getAdvancePayment() != null ? request.getAdvancePayment() : 0.0);
         order.setPaymentStatus("PAID");
         order.setNotes(request.getAdditionalNotes());
         order.setStatus(OrderStatus.NEW);
