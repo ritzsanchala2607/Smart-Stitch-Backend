@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.stitcho.beta.Repository.CustomerRepository;
+import com.stitcho.beta.Repository.OrderActivityRepository;
 import com.stitcho.beta.Repository.OrderItemRepository;
 import com.stitcho.beta.Repository.OrderRepository;
 import com.stitcho.beta.Repository.OwnerRepository;
@@ -22,6 +23,7 @@ import com.stitcho.beta.dto.UpdateOrderRequest;
 import com.stitcho.beta.dto.WeeklyOrderSummary;
 import com.stitcho.beta.entity.Customer;
 import com.stitcho.beta.entity.Order;
+import com.stitcho.beta.entity.OrderActivity;
 import com.stitcho.beta.entity.OrderItem;
 import com.stitcho.beta.entity.OrderStatus;
 import com.stitcho.beta.entity.Owner;
@@ -29,7 +31,6 @@ import com.stitcho.beta.entity.Shop;
 import com.stitcho.beta.entity.Task;
 import com.stitcho.beta.entity.TaskStatus;
 import com.stitcho.beta.entity.TaskType;
-import com.stitcho.beta.entity.Worker;
 import com.stitcho.beta.entity.Worker;
 
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,7 @@ public class SecureOrderService {
     private final CustomerRepository customerRepository;
     private final WorkerRepository workerRepository;
     private final OwnerRepository ownerRepository;
+    private final OrderActivityRepository orderActivityRepository;
     private final ActivityLogService activityLogService;
 
     @Transactional
