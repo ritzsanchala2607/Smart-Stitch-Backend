@@ -192,7 +192,7 @@ public class AdminService {
                 .count();
         
         // Get total workers for this shop
-        Long totalWorkers = workerRepository.findByShop_ShopId(shop.getShopId()).size();
+        Long totalWorkers = (long) workerRepository.findByShop_ShopId(shop.getShopId()).size();
         
         // Check if shop is active (has orders in last 30 days)
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
@@ -208,7 +208,7 @@ public class AdminService {
             ownerEmail,
             ownerContact,
             totalOrders,
-            totalWorkers.longValue(),
+            totalWorkers,
             shop.getShopAddress(),
             null, // createdAt not available in Shop entity
             isActive
