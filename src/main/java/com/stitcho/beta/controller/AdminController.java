@@ -3,7 +3,11 @@ package com.stitcho.beta.controller;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -14,9 +18,11 @@ import com.stitcho.beta.dto.AllShopsResponse;
 import com.stitcho.beta.dto.ApiResponse;
 import com.stitcho.beta.dto.PlatformAnalyticsResponse;
 import com.stitcho.beta.dto.ShopAnalyticsResponse;
+import com.stitcho.beta.dto.UpdateShopRequest;
 import com.stitcho.beta.service.AdminService;
 import com.stitcho.beta.util.JwtUtil;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -129,5 +135,58 @@ public class AdminController {
 
         List<AllShopsResponse> shops = adminService.getAllShops(search);
         return ResponseEntity.ok(ApiResponse.success("Shops fetched successfully", shops));
+    }
+
+    /**
+     * Update shop details
+     * Allows admin to edit shop and owner information
+     */
+    @PutMapping("/shops/{shopId}")
+    public ResponseEntity<ApiResponse<Void>> updateShop(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long shopId,
+            @Valid @RequestBody UpdateShopRequest request) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        String role = jwtUtil.extractRole(token);
+        
+        if (!"ADMIN".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only admins can update shops", null));
+        }
+
+        adminService.updateShop(shopId, request);
+        return ResponseEntity.ok(ApiResponse.success("Shop updated successfully"));
+    }
+
+    /**
+     * Delete shop and all related data
+     * Cascade deletes: customers, workers, orders, tasks, measurements, ratings, owner
+     */
+    @DeleteMapping("/shops/{shopId}")
+    public ResponseEntity<ApiResponse<Void>> deleteShop(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long shopId) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        String role = jwtUtil.extractRole(token);
+        
+        if (!"ADMIN".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only admins can delete shops", null));
+        }
+
+        adminService.deleteShop(shopId);
+        return ResponseEntity.ok(ApiResponse.success("Shop and all related data deleted successfully"));
     }
 }

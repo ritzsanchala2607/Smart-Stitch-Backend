@@ -4,26 +4,39 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.stitcho.beta.Repository.CustomerRepository;
+import com.stitcho.beta.Repository.MeasurementProfileRepository;
+import com.stitcho.beta.Repository.OrderActivityRepository;
+import com.stitcho.beta.Repository.OrderItemRepository;
 import com.stitcho.beta.Repository.OrderRepository;
 import com.stitcho.beta.Repository.OwnerRepository;
+import com.stitcho.beta.Repository.RateRepository;
+import com.stitcho.beta.Repository.ShopRatingRepository;
 import com.stitcho.beta.Repository.ShopRepository;
+import com.stitcho.beta.Repository.TaskRepository;
+import com.stitcho.beta.Repository.UserRepository;
+import com.stitcho.beta.Repository.WorkerRatingRepository;
 import com.stitcho.beta.Repository.WorkerRepository;
 import com.stitcho.beta.dto.AdminDashboardResponse;
 import com.stitcho.beta.dto.AllShopsResponse;
 import com.stitcho.beta.dto.PlatformAnalyticsResponse;
 import com.stitcho.beta.dto.ShopAnalyticsResponse;
+import com.stitcho.beta.dto.UpdateShopRequest;
+import com.stitcho.beta.entity.Customer;
 import com.stitcho.beta.entity.Order;
+import com.stitcho.beta.entity.OrderActivity;
+import com.stitcho.beta.entity.OrderItem;
 import com.stitcho.beta.entity.Owner;
 import com.stitcho.beta.entity.Shop;
+import com.stitcho.beta.entity.Task;
+import com.stitcho.beta.entity.User;
 import com.stitcho.beta.entity.Worker;
 
 import lombok.RequiredArgsConstructor;
@@ -36,6 +49,14 @@ public class AdminService {
     private final WorkerRepository workerRepository;
     private final OrderRepository orderRepository;
     private final CustomerRepository customerRepository;
+    private final UserRepository userRepository;
+    private final MeasurementProfileRepository measurementProfileRepository;
+    private final TaskRepository taskRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final OrderActivityRepository orderActivityRepository;
+    private final RateRepository rateRepository;
+    private final WorkerRatingRepository workerRatingRepository;
+    private final ShopRatingRepository shopRatingRepository;
 
     /**
      * Get admin dashboard overview
@@ -373,5 +394,160 @@ public class AdminService {
         }
         
         return result;
+    }
+
+    /**
+     * Update shop details (admin only)
+     */
+    @Transactional
+    public void updateShop(Long shopId, UpdateShopRequest request) {
+        // Get shop
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new RuntimeException("Shop not found"));
+        
+        // Update shop details
+        if (request.getShop() != null) {
+            if (request.getShop().getShopName() != null) {
+                shop.setShopName(request.getShop().getShopName());
+            }
+            if (request.getShop().getShopEmail() != null) {
+                shop.setShopEmail(request.getShop().getShopEmail());
+            }
+            if (request.getShop().getShopMobileNo() != null) {
+                shop.setShopMobileNo(request.getShop().getShopMobileNo());
+            }
+            if (request.getShop().getShopAddress() != null) {
+                shop.setShopAddress(request.getShop().getShopAddress());
+            }
+        }
+        shopRepository.save(shop);
+        
+        // Update owner details if provided
+        if (request.getOwner() != null) {
+            Owner owner = ownerRepository.findAll().stream()
+                    .filter(o -> o.getShop().getShopId().equals(shopId))
+                    .findFirst()
+                    .orElse(null);
+            
+            if (owner != null && owner.getUser() != null) {
+                User user = owner.getUser();
+                if (request.getOwner().getName() != null) {
+                    user.setName(request.getOwner().getName());
+                }
+                if (request.getOwner().getEmail() != null) {
+                    user.setEmail(request.getOwner().getEmail());
+                }
+                if (request.getOwner().getContactNumber() != null) {
+                    user.setContactNumber(request.getOwner().getContactNumber());
+                }
+                userRepository.save(user);
+            }
+        }
+    }
+
+    /**
+     * Delete shop and all related data (admin only)
+     * Cascade deletes: customers, workers, orders, tasks, measurements, ratings
+     */
+    @Transactional
+    public void deleteShop(Long shopId) {
+        // Verify shop exists
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new RuntimeException("Shop not found"));
+        
+        // Get all customers for this shop
+        List<Customer> customers = customerRepository.findAll().stream()
+                .filter(c -> c.getShop().getShopId().equals(shopId))
+                .collect(Collectors.toList());
+        
+        // Delete measurement profiles for each customer
+        for (Customer customer : customers) {
+            measurementProfileRepository.deleteByCustomer_Id(customer.getId());
+        }
+        
+        // Get all workers for this shop
+        List<Worker> workers = workerRepository.findByShop_ShopId(shopId);
+        
+        // Get all orders for this shop
+        List<Order> orders = orderRepository.findAll().stream()
+                .filter(o -> o.getShop().getShopId().equals(shopId))
+                .collect(Collectors.toList());
+        
+        // Delete order-related data
+        for (Order order : orders) {
+            // Delete tasks for this order
+            List<Task> tasks = taskRepository.findByOrder_OrderId(order.getOrderId());
+            taskRepository.deleteAll(tasks);
+            
+            // Delete order items
+            List<OrderItem> orderItems = orderItemRepository.findByOrder_OrderId(order.getOrderId());
+            orderItemRepository.deleteAll(orderItems);
+            
+            // Delete order activities
+            List<OrderActivity> activities = orderActivityRepository.findAll().stream()
+                    .filter(a -> a.getOrder().getOrderId().equals(order.getOrderId()))
+                    .collect(Collectors.toList());
+            orderActivityRepository.deleteAll(activities);
+        }
+        
+        // Delete orders
+        orderRepository.deleteAll(orders);
+        
+        // Delete workers and their related data
+        for (Worker worker : workers) {
+            // Delete rates for this worker
+            rateRepository.deleteAll(rateRepository.findByWorker_Id(worker.getId()));
+            
+            // Delete worker ratings
+            workerRatingRepository.deleteAll(
+                workerRatingRepository.findAll().stream()
+                    .filter(wr -> wr.getWorker().getId().equals(worker.getId()))
+                    .collect(Collectors.toList())
+            );
+            
+            // Delete worker
+            workerRepository.delete(worker);
+            
+            // Delete worker's user account
+            if (worker.getUser() != null) {
+                userRepository.delete(worker.getUser());
+            }
+        }
+        
+        // Delete customers and their user accounts
+        for (Customer customer : customers) {
+            customerRepository.delete(customer);
+            
+            // Delete customer's user account
+            if (customer.getUser() != null) {
+                userRepository.delete(customer.getUser());
+            }
+        }
+        
+        // Delete shop ratings
+        shopRatingRepository.deleteAll(
+            shopRatingRepository.findAll().stream()
+                .filter(sr -> sr.getShop().getShopId().equals(shopId))
+                .collect(Collectors.toList())
+        );
+        
+        // Get owner for this shop
+        Owner owner = ownerRepository.findAll().stream()
+                .filter(o -> o.getShop().getShopId().equals(shopId))
+                .findFirst()
+                .orElse(null);
+        
+        // Delete owner
+        if (owner != null) {
+            ownerRepository.delete(owner);
+            
+            // Delete owner's user account
+            if (owner.getUser() != null) {
+                userRepository.delete(owner.getUser());
+            }
+        }
+        
+        // Finally, delete the shop
+        shopRepository.delete(shop);
     }
 }
