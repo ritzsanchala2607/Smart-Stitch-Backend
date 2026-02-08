@@ -238,8 +238,52 @@ public class SecureCustomerService {
                 .sum();
         response.setTotalSpent(totalSpent);
 
-        // Note: Measurements are now retrieved through the Measurement API
-        // Use GET /api/measurements/customer/{customerId} to get all measurement profiles
+        // Fetch measurements from new measurement system
+        // Get the first measurement profile (for backward compatibility)
+        List<com.stitcho.beta.entity.MeasurementProfile> profiles = 
+            measurementProfileRepository.findByCustomer_Id(customer.getId());
+        
+        if (!profiles.isEmpty()) {
+            // Use the first profile found
+            com.stitcho.beta.entity.MeasurementProfile profile = profiles.get(0);
+            com.stitcho.beta.dto.MeasurementDto measurementDto = new com.stitcho.beta.dto.MeasurementDto();
+            
+            // Map measurement values to DTO
+            for (com.stitcho.beta.entity.MeasurementValue mv : profile.getMeasurements()) {
+                String key = mv.getMeasurementKey().toLowerCase();
+                Double value = mv.getMeasurementValue().doubleValue();
+                
+                switch (key) {
+                    case "chest":
+                        measurementDto.setChest(value);
+                        break;
+                    case "shoulder":
+                        measurementDto.setShoulder(value);
+                        break;
+                    case "shirtlength":
+                    case "shirt_length":
+                        measurementDto.setShirtLength(value);
+                        break;
+                    case "waist":
+                        measurementDto.setWaist(value);
+                        break;
+                    case "pantlength":
+                    case "pant_length":
+                        measurementDto.setPantLength(value);
+                        break;
+                    case "hip":
+                        measurementDto.setHip(value);
+                        break;
+                }
+            }
+            
+            // Add notes as custom measurements
+            if (profile.getNotes() != null && !profile.getNotes().isEmpty()) {
+                measurementDto.setCustomMeasurements(profile.getNotes());
+            }
+            
+            response.setMeasurements(measurementDto);
+        }
 
         return response;
     }
