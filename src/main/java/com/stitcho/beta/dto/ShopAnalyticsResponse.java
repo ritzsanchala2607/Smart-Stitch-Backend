@@ -3,55 +3,73 @@ package com.stitcho.beta.dto;
 import java.util.List;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class ShopAnalyticsResponse {
-    private ShopStatusDistribution shopStatusDistribution;
-    private WorkersDistribution workersDistribution;
-    private List<MonthlyShopRegistration> monthlyShopRegistrations;
-    private List<MonthlyOrdersProcessed> monthlyOrdersProcessed;
-    
-    @Getter
-    @Setter
+    private OverviewStats overview;
+    private List<DailyOrderTrend> dailyOrderTrend;
+    private List<MonthlyRevenueTrend> monthlyRevenueTrend;
+    private OrderStatusDistribution orderStatusDistribution;
+    private List<WorkerPerformance> workerPerformance;
+
+    @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class ShopStatusDistribution {
-        private Long activeShops;
-        private Long inactiveShops;
+    public static class OverviewStats {
+        private Long totalOrders;
+        private Long activeOrders;
+        private Long completedOrders;
+        private Double totalRevenue;
+        private Double pendingPayments;
+        private Integer totalCustomers;
+        private Integer totalWorkers;
     }
-    
-    @Getter
-    @Setter
+
+    @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class WorkersDistribution {
-        private Long shops1to3Workers;
-        private Long shops4to6Workers;
-        private Long shops7to10Workers;
-        private Long shops10PlusWorkers;
+    public static class DailyOrderTrend {
+        private String day;
+        private Integer orderCount;
     }
-    
-    @Getter
-    @Setter
+
+    @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class MonthlyShopRegistration {
+    public static class MonthlyRevenueTrend {
         private String month;
-        private Long shopsRegistered;
+        private Double revenue;
+        private Double expense;
     }
-    
-    @Getter
-    @Setter
+
+    @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class MonthlyOrdersProcessed {
-        private String month;
-        private Long ordersProcessed;
+    public static class OrderStatusDistribution {
+        private Integer pending;
+        private Integer cutting;
+        private Integer stitching;
+        private Integer fitting;
+        private Integer ready;
+        private Integer completed;
+        private Integer total;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class WorkerPerformance {
+        private Long workerId;
+        private String workerName;
+        private String specialty;
+        private Integer totalTasks;
+        private Integer completedTasks;
+        private Double performancePercentage;
+        private Double averageRating;
+        private Double completionRate;
     }
 }
