@@ -24,6 +24,7 @@ import com.stitcho.beta.Repository.WorkerRatingRepository;
 import com.stitcho.beta.Repository.WorkerRepository;
 import com.stitcho.beta.dto.OwnerProfileResponse;
 import com.stitcho.beta.dto.ShopAnalyticsResponse;
+import com.stitcho.beta.dto.MonthlyRevenueResponse;
 import com.stitcho.beta.dto.UpdateOwnerProfileRequest;
 import com.stitcho.beta.entity.Order;
 import com.stitcho.beta.entity.OrderStatus;
@@ -286,5 +287,76 @@ public class SecureOwnerService {
                     );
                 })
                 .collect(Collectors.toList());
+    }
+
+    // ==================== MONTHLY REVENUE ====================
+
+    public MonthlyRevenueResponse getMonthlyRevenue(Long userId, Integer year) {
+        Owner owner = ownerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Owner not found"));
+        
+        Long shopId = owner.getShop().getShopId();
+        
+        // Use current year if not specified
+        int targetYear = year != null ? year : LocalDate.now().getYear();
+        
+        // Get all completed orders for the shop
+        List<Order> allOrders = orderRepository.findByShop_ShopId(shopId);
+        List<Order> completedOrders = allOrders.stream()
+                .filter(o -> OrderStatus.COMPLETED.equals(o.getStatus()))
+                .filter(o -> o.getCreatedAt() != null)
+                .filter(o -> o.getCreatedAt().getYear() == targetYear)
+                .collect(Collectors.toList());
+        
+        // Group orders by month and calculate revenue
+        List<MonthlyRevenueResponse.MonthRevenue> monthlyData = new ArrayList<>();
+        double totalYearRevenue = 0.0;
+        String highestRevenueMonth = "";
+        double highestRevenueAmount = 0.0;
+        
+        for (int month = 1; month <= 12; month++) {
+            final int currentMonth = month;
+            
+            List<Order> monthOrders = completedOrders.stream()
+                    .filter(o -> o.getCreatedAt().getMonthValue() == currentMonth)
+                    .collect(Collectors.toList());
+            
+            double monthRevenue = monthOrders.stream()
+                    .mapToDouble(Order::getTotalPrice)
+                    .sum();
+            
+            int orderCount = monthOrders.size();
+            double avgOrderValue = orderCount > 0 ? monthRevenue / orderCount : 0.0;
+            
+            String monthName = java.time.Month.of(month)
+                    .getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
+            
+            monthlyData.add(new MonthlyRevenueResponse.MonthRevenue(
+                month,
+                monthName,
+                Math.round(monthRevenue * 100.0) / 100.0,
+                orderCount,
+                Math.round(avgOrderValue * 100.0) / 100.0
+            ));
+            
+            totalYearRevenue += monthRevenue;
+            
+            // Track highest revenue month
+            if (monthRevenue > highestRevenueAmount) {
+                highestRevenueAmount = monthRevenue;
+                highestRevenueMonth = monthName;
+            }
+        }
+        
+        double averageMonthlyRevenue = totalYearRevenue / 12;
+        
+        return new MonthlyRevenueResponse(
+            targetYear,
+            monthlyData,
+            Math.round(totalYearRevenue * 100.0) / 100.0,
+            Math.round(averageMonthlyRevenue * 100.0) / 100.0,
+            highestRevenueMonth,
+            Math.round(highestRevenueAmount * 100.0) / 100.0
+        );
     }
 }
