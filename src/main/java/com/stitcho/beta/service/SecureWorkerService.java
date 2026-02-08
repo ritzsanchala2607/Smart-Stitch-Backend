@@ -13,13 +13,17 @@ import com.stitcho.beta.Repository.RoleRepository;
 import com.stitcho.beta.Repository.TaskRepository;
 import com.stitcho.beta.Repository.UserRepository;
 import com.stitcho.beta.Repository.WorkerRepository;
+import com.stitcho.beta.Repository.WorkerRatingRepository;
 import com.stitcho.beta.dto.CreateWorkerRequest;
 import com.stitcho.beta.dto.WorkerResponse;
+import com.stitcho.beta.dto.WorkerStatsResponse;
+import com.stitcho.beta.dto.WorkerTaskResponse;
 import com.stitcho.beta.entity.Owner;
 import com.stitcho.beta.entity.Rate;
 import com.stitcho.beta.entity.Role;
 import com.stitcho.beta.entity.Shop;
 import com.stitcho.beta.entity.Task;
+import com.stitcho.beta.entity.TaskStatus;
 import com.stitcho.beta.entity.User;
 import com.stitcho.beta.entity.Worker;
 
@@ -34,6 +38,7 @@ public class SecureWorkerService {
     private final TaskRepository taskRepository;
     private final RoleRepository roleRepository;
     private final OwnerRepository ownerRepository;
+    private final WorkerRatingRepository workerRatingRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
@@ -157,6 +162,81 @@ public class SecureWorkerService {
                 .collect(Collectors.toList());
         response.setRates(rateInfos);
 
+        return response;
+    }
+
+    // ==================== WORKER DASHBOARD METHODS ====================
+
+    public WorkerStatsResponse getWorkerStats(Long userId) {
+        Worker worker = workerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Worker not found"));
+        
+        List<Task> allTasks = taskRepository.findByWorker_Id(worker.getId());
+        
+        int totalTasks = allTasks.size();
+        int pendingTasks = (int) allTasks.stream()
+                .filter(t -> t.getStatus() == TaskStatus.PENDING)
+                .count();
+        int inProgressTasks = (int) allTasks.stream()
+                .filter(t -> t.getStatus() == TaskStatus.IN_PROGRESS)
+                .count();
+        int completedTasks = (int) allTasks.stream()
+                .filter(t -> t.getStatus() == TaskStatus.COMPLETED)
+                .count();
+        
+        // Calculate average rating
+        List<com.stitcho.beta.entity.WorkerRating> ratings = workerRatingRepository.findByWorker_Id(worker.getId());
+        Double averageRating = ratings.isEmpty() ? 0.0 : 
+                ratings.stream()
+                        .mapToDouble(com.stitcho.beta.entity.WorkerRating::getRating)
+                        .average()
+                        .orElse(0.0);
+        
+        return new WorkerStatsResponse(
+                totalTasks,
+                pendingTasks,
+                inProgressTasks,
+                completedTasks,
+                Math.round(averageRating * 10.0) / 10.0, // Round to 1 decimal
+                ratings.size()
+        );
+    }
+
+    public List<WorkerTaskResponse> getWorkerTasks(Long userId) {
+        Worker worker = workerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Worker not found"));
+        
+        List<Task> tasks = taskRepository.findByWorker_Id(worker.getId());
+        
+        return tasks.stream()
+                .map(this::mapToWorkerTaskResponse)
+                .collect(Collectors.toList());
+    }
+
+    private WorkerTaskResponse mapToWorkerTaskResponse(Task task) {
+        WorkerTaskResponse response = new WorkerTaskResponse();
+        response.setTaskId(task.getTaskId());
+        response.setTaskType(task.getTaskType() != null ? task.getTaskType().name() : null);
+        response.setStatus(task.getStatus() != null ? task.getStatus().name() : "PENDING");
+        response.setAssignedAt(task.getAssignedAt());
+        response.setStartedAt(task.getStartedAt());
+        response.setCompletedAt(task.getCompletedAt());
+        
+        if (task.getOrder() != null) {
+            WorkerTaskResponse.OrderInfo orderInfo = new WorkerTaskResponse.OrderInfo();
+            orderInfo.setOrderId(task.getOrder().getOrderId());
+            orderInfo.setDeadline(task.getOrder().getDeadline());
+            orderInfo.setOrderStatus(task.getOrder().getStatus() != null ? 
+                    task.getOrder().getStatus().name() : "NEW");
+            
+            if (task.getOrder().getCustomer() != null && 
+                task.getOrder().getCustomer().getUser() != null) {
+                orderInfo.setCustomerName(task.getOrder().getCustomer().getUser().getName());
+            }
+            
+            response.setOrder(orderInfo);
+        }
+        
         return response;
     }
 }

@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.stitcho.beta.dto.ApiResponse;
 import com.stitcho.beta.dto.CreateWorkerRequest;
 import com.stitcho.beta.dto.WorkerResponse;
+import com.stitcho.beta.dto.WorkerStatsResponse;
+import com.stitcho.beta.dto.WorkerTaskResponse;
 import com.stitcho.beta.entity.Task;
 import com.stitcho.beta.service.SecureWorkerService;
 import com.stitcho.beta.util.JwtUtil;
@@ -151,5 +153,60 @@ public class SecureWorkerController {
 
         workerService.deleteWorker(userId, workerId);
         return ResponseEntity.ok(ApiResponse.success("Worker deleted successfully"));
+    }
+
+    // ==================== WORKER DASHBOARD ENDPOINTS ====================
+
+    /**
+     * Get worker dashboard statistics
+     * GET /api/workers/me/stats
+     */
+    @GetMapping("/me/stats")
+    public ResponseEntity<ApiResponse<WorkerStatsResponse>> getWorkerStats(
+            @RequestHeader("Authorization") String authHeader) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        Long userId = jwtUtil.extractUserId(token);
+        String role = jwtUtil.extractRole(token);
+        
+        if (!"WORKER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only workers can access this endpoint", null));
+        }
+
+        WorkerStatsResponse stats = workerService.getWorkerStats(userId);
+        return ResponseEntity.ok(ApiResponse.success("Worker statistics fetched successfully", stats));
+    }
+
+    /**
+     * Get worker's assigned tasks with order details
+     * GET /api/workers/me/tasks (Enhanced version)
+     * This replaces the existing /me/tasks endpoint with more detailed information
+     */
+    @GetMapping("/me/tasks/detailed")
+    public ResponseEntity<ApiResponse<List<WorkerTaskResponse>>> getDetailedTasks(
+            @RequestHeader("Authorization") String authHeader) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        Long userId = jwtUtil.extractUserId(token);
+        String role = jwtUtil.extractRole(token);
+        
+        if (!"WORKER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only workers can access this endpoint", null));
+        }
+
+        List<WorkerTaskResponse> tasks = workerService.getWorkerTasks(userId);
+        return ResponseEntity.ok(ApiResponse.success("Worker tasks fetched successfully", tasks));
     }
 }
