@@ -25,9 +25,9 @@ import com.stitcho.beta.Repository.UserRepository;
 import com.stitcho.beta.Repository.WorkerRatingRepository;
 import com.stitcho.beta.Repository.WorkerRepository;
 import com.stitcho.beta.dto.AdminDashboardResponse;
+import com.stitcho.beta.dto.AdminAnalyticsResponse;
 import com.stitcho.beta.dto.AllShopsResponse;
 import com.stitcho.beta.dto.PlatformAnalyticsResponse;
-import com.stitcho.beta.dto.ShopAnalyticsResponse;
 import com.stitcho.beta.dto.UpdateShopRequest;
 import com.stitcho.beta.entity.Customer;
 import com.stitcho.beta.entity.Order;
@@ -140,7 +140,7 @@ public class AdminService {
     /**
      * Get shop analytics
      */
-    public ShopAnalyticsResponse getShopAnalytics() {
+    public AdminAnalyticsResponse getShopAnalytics() {
         // Shop Status Distribution
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
         List<Order> recentOrders = orderRepository.findAll().stream()
@@ -155,19 +155,19 @@ public class AdminService {
         Long totalShops = shopRepository.count();
         Long inactiveShops = totalShops - activeShops;
         
-        ShopAnalyticsResponse.ShopStatusDistribution shopStatusDistribution = 
-            new ShopAnalyticsResponse.ShopStatusDistribution(activeShops, inactiveShops);
+        AdminAnalyticsResponse.ShopStatusDistribution shopStatusDistribution = 
+            new AdminAnalyticsResponse.ShopStatusDistribution(activeShops, inactiveShops);
         
         // Workers Distribution
-        ShopAnalyticsResponse.WorkersDistribution workersDistribution = getWorkersDistribution();
+        AdminAnalyticsResponse.WorkersDistribution workersDistribution = getWorkersDistribution();
         
         // Monthly Shop Registrations (last 7 months)
-        List<ShopAnalyticsResponse.MonthlyShopRegistration> monthlyShopRegistrations = getMonthlyShopRegistrations();
+        List<AdminAnalyticsResponse.MonthlyShopRegistration> monthlyShopRegistrations = getMonthlyShopRegistrations();
         
         // Monthly Orders Processed (last 7 months)
-        List<ShopAnalyticsResponse.MonthlyOrdersProcessed> monthlyOrdersProcessed = getMonthlyOrdersProcessed();
+        List<AdminAnalyticsResponse.MonthlyOrdersProcessed> monthlyOrdersProcessed = getMonthlyOrdersProcessed();
         
-        return new ShopAnalyticsResponse(
+        return new AdminAnalyticsResponse(
             shopStatusDistribution,
             workersDistribution,
             monthlyShopRegistrations,
@@ -330,7 +330,7 @@ public class AdminService {
         return result;
     }
 
-    private ShopAnalyticsResponse.WorkersDistribution getWorkersDistribution() {
+    private AdminAnalyticsResponse.WorkersDistribution getWorkersDistribution() {
         List<Shop> allShops = shopRepository.findAll();
         
         long shops1to3 = 0;
@@ -352,11 +352,11 @@ public class AdminService {
             }
         }
         
-        return new ShopAnalyticsResponse.WorkersDistribution(shops1to3, shops4to6, shops7to10, shops10Plus);
+        return new AdminAnalyticsResponse.WorkersDistribution(shops1to3, shops4to6, shops7to10, shops10Plus);
     }
 
-    private List<ShopAnalyticsResponse.MonthlyShopRegistration> getMonthlyShopRegistrations() {
-        List<ShopAnalyticsResponse.MonthlyShopRegistration> result = new ArrayList<>();
+    private List<AdminAnalyticsResponse.MonthlyShopRegistration> getMonthlyShopRegistrations() {
+        List<AdminAnalyticsResponse.MonthlyShopRegistration> result = new ArrayList<>();
         
         // Since Shop entity doesn't have createdAt, we'll use a placeholder
         // In a real scenario, you'd add createdAt to Shop entity
@@ -367,14 +367,14 @@ public class AdminService {
             // Placeholder: distribute shops evenly across months
             long shopsRegistered = shopRepository.count() / 7;
             
-            result.add(new ShopAnalyticsResponse.MonthlyShopRegistration(monthName, shopsRegistered));
+            result.add(new AdminAnalyticsResponse.MonthlyShopRegistration(monthName, shopsRegistered));
         }
         
         return result;
     }
 
-    private List<ShopAnalyticsResponse.MonthlyOrdersProcessed> getMonthlyOrdersProcessed() {
-        List<ShopAnalyticsResponse.MonthlyOrdersProcessed> result = new ArrayList<>();
+    private List<AdminAnalyticsResponse.MonthlyOrdersProcessed> getMonthlyOrdersProcessed() {
+        List<AdminAnalyticsResponse.MonthlyOrdersProcessed> result = new ArrayList<>();
         List<Order> allOrders = orderRepository.findAll();
         
         for (int i = 6; i >= 0; i--) {
@@ -390,7 +390,7 @@ public class AdminService {
                                o.getCreatedAt().isBefore(monthEnd))
                     .count();
             
-            result.add(new ShopAnalyticsResponse.MonthlyOrdersProcessed(monthName, ordersProcessed));
+            result.add(new AdminAnalyticsResponse.MonthlyOrdersProcessed(monthName, ordersProcessed));
         }
         
         return result;

@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.stitcho.beta.dto.AdminDashboardResponse;
 import com.stitcho.beta.dto.AllShopsResponse;
+import com.stitcho.beta.dto.AdminAnalyticsResponse;
 import com.stitcho.beta.dto.ApiResponse;
 import com.stitcho.beta.dto.PlatformAnalyticsResponse;
-import com.stitcho.beta.dto.ShopAnalyticsResponse;
 import com.stitcho.beta.dto.UpdateShopRequest;
 import com.stitcho.beta.service.AdminService;
 import com.stitcho.beta.util.JwtUtil;
@@ -91,7 +91,7 @@ public class AdminController {
      * Shows shop status distribution, workers distribution, and monthly trends
      */
     @GetMapping("/analytics/shops")
-    public ResponseEntity<ApiResponse<ShopAnalyticsResponse>> getShopAnalytics(
+    public ResponseEntity<ApiResponse<AdminAnalyticsResponse>> getShopAnalytics(
             @RequestHeader("Authorization") String authHeader) {
         
         String token = jwtUtil.getTokenFromHeader(authHeader);
@@ -107,7 +107,7 @@ public class AdminController {
                     .body(ApiResponse.success("Only admins can access this endpoint", null));
         }
 
-        ShopAnalyticsResponse analytics = adminService.getShopAnalytics();
+        AdminAnalyticsResponse analytics = adminService.getShopAnalytics();
         return ResponseEntity.ok(ApiResponse.success("Shop analytics fetched successfully", analytics));
     }
 
