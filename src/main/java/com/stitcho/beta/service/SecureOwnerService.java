@@ -25,6 +25,7 @@ import com.stitcho.beta.Repository.WorkerRepository;
 import com.stitcho.beta.dto.OwnerProfileResponse;
 import com.stitcho.beta.dto.ShopAnalyticsResponse;
 import com.stitcho.beta.dto.MonthlyRevenueResponse;
+import com.stitcho.beta.dto.CalendarTaskResponse;
 import com.stitcho.beta.dto.UpdateOwnerProfileRequest;
 import com.stitcho.beta.entity.Order;
 import com.stitcho.beta.entity.OrderStatus;
@@ -358,5 +359,74 @@ public class SecureOwnerService {
             highestRevenueMonth,
             Math.round(highestRevenueAmount * 100.0) / 100.0
         );
+    }
+
+    // ==================== CALENDAR TASKS ====================
+
+    public List<CalendarTaskResponse> getCalendarTasks(Long userId, Integer year, Integer month) {
+        Owner owner = ownerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Owner not found"));
+        
+        Long shopId = owner.getShop().getShopId();
+        
+        // Use current year/month if not specified
+        int targetYear = year != null ? year : LocalDate.now().getYear();
+        int targetMonth = month != null ? month : LocalDate.now().getMonthValue();
+        
+        // Get all orders for the shop
+        List<Order> orders = orderRepository.findByShop_ShopId(shopId);
+        
+        // Get all tasks for these orders and filter by deadline month/year
+        Map<LocalDate, List<CalendarTaskResponse.TaskDetail>> tasksByDate = new HashMap<>();
+        
+        for (Order order : orders) {
+            if (order.getDeadline() != null) {
+                LocalDate deadline = order.getDeadline();
+                
+                // Filter by year and month
+                if (deadline.getYear() == targetYear && deadline.getMonthValue() == targetMonth) {
+                    // Get tasks for this order
+                    List<Task> orderTasks = taskRepository.findByOrder_OrderId(order.getOrderId());
+                    
+                    for (Task task : orderTasks) {
+                        CalendarTaskResponse.TaskDetail taskDetail = new CalendarTaskResponse.TaskDetail();
+                        taskDetail.setTaskId(task.getTaskId());
+                        taskDetail.setOrderId(order.getOrderId());
+                        taskDetail.setTaskType(task.getTaskType() != null ? task.getTaskType().name() : "UNKNOWN");
+                        taskDetail.setStatus(task.getStatus() != null ? task.getStatus().name() : "PENDING");
+                        taskDetail.setDeadline(deadline);
+                        
+                        // Customer info
+                        if (order.getCustomer() != null && order.getCustomer().getUser() != null) {
+                            taskDetail.setCustomerName(order.getCustomer().getUser().getName());
+                            taskDetail.setCustomerPhone(order.getCustomer().getUser().getContactNumber());
+                        }
+                        
+                        // Worker info
+                        if (task.getWorker() != null && task.getWorker().getUser() != null) {
+                            taskDetail.setWorkerName(task.getWorker().getUser().getName());
+                        }
+                        
+                        // Add to map
+                        tasksByDate.computeIfAbsent(deadline, k -> new ArrayList<>()).add(taskDetail);
+                    }
+                }
+            }
+        }
+        
+        // Convert map to list of CalendarTaskResponse
+        List<CalendarTaskResponse> calendarTasks = new ArrayList<>();
+        for (Map.Entry<LocalDate, List<CalendarTaskResponse.TaskDetail>> entry : tasksByDate.entrySet()) {
+            calendarTasks.add(new CalendarTaskResponse(
+                entry.getKey(),
+                entry.getValue(),
+                entry.getValue().size()
+            ));
+        }
+        
+        // Sort by date
+        calendarTasks.sort((a, b) -> a.getDate().compareTo(b.getDate()));
+        
+        return calendarTasks;
     }
 }

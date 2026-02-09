@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.stitcho.beta.dto.ApiResponse;
 import com.stitcho.beta.dto.ShopAnalyticsResponse;
 import com.stitcho.beta.dto.MonthlyRevenueResponse;
+import com.stitcho.beta.dto.CalendarTaskResponse;
 import com.stitcho.beta.service.SecureOwnerService;
 import com.stitcho.beta.util.JwtUtil;
 
@@ -81,5 +82,34 @@ public class ShopAnalyticsController {
 
         MonthlyRevenueResponse revenue = ownerService.getMonthlyRevenue(userId, year);
         return ResponseEntity.ok(ApiResponse.success("Monthly revenue fetched successfully", revenue));
+    }
+
+    /**
+     * Get calendar tasks organized by due date
+     * GET /api/shops/me/tasks/calendar
+     * Query params: year (optional), month (optional)
+     */
+    @GetMapping("/me/tasks/calendar")
+    public ResponseEntity<ApiResponse<java.util.List<CalendarTaskResponse>>> getCalendarTasks(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.success("Invalid or missing token", null));
+        }
+
+        Long userId = jwtUtil.extractUserId(token);
+        String role = jwtUtil.extractRole(token);
+        
+        if (!"OWNER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.success("Only owners can access this endpoint", null));
+        }
+
+        java.util.List<CalendarTaskResponse> calendarTasks = ownerService.getCalendarTasks(userId, year, month);
+        return ResponseEntity.ok(ApiResponse.success("Calendar tasks fetched successfully", calendarTasks));
     }
 }

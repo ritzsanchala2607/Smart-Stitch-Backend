@@ -28,4 +28,6 @@ public class Shop {
     private String shopMobileNo;
 
     private String shopAddress;
+
+    private String gstNumber;
 }
