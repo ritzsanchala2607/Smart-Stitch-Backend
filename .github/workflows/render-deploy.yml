@@ -1,0 +1,25 @@
+name: Deploy Dockerized Spring Boot to Render
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # OPTIONAL: fast sanity check (no Docker build)
+      - name: Validate Maven project
+        run: ./mvnw -q -DskipTests=true validate
+
+      # Trigger Render deploy
+      - name: Trigger Render Deploy
+        run: |
+          curl -X POST "$RENDER_DEPLOY_HOOK"
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
